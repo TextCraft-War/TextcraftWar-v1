@@ -1,8 +1,35 @@
 # 限制单函数复杂度和行数
-too-many-lines-threshold = 100
-cognitive-complexity-threshold = 20
+too-many-lines-threshold = 80
+cognitive-complexity-threshold = 15
 
 # 防范并发死锁与性能开销
 await-holding-lock = "deny"
 large-futures = "deny"
 verbose-file-reads = "warn"
+
+# 限制函数参数数量
+too-many-arguments-threshold = 6
+
+# 类型复杂度
+type-complexity-threshold = 250
+
+# 枚举变体大小
+enum-variant-size-threshold = 200
+
+# 未来不兼容
+future-incompatible = "deny"
+
+# 隐式返回
+implicit-return = "warn"
+
+# 索引切片
+indexing-slicing = "warn"
+
+# 整数运算
+integer-arithmetic = "warn"
+
+# 不安全的 unwrap
+unwrap-used = "warn"
+
+# 期望消息
+expect-used = "warn"

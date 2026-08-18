@@ -1,8 +1,11 @@
 [package]
 name = "storage"
+description = "SeaORM-based persistent storage layer with Moka caching"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 sea-orm.workspace = true

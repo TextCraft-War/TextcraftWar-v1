@@ -5,9 +5,15 @@ members = ["crates/protocol", "crates/storage", "crates/server"]
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
-authors = ["Developer <dev@textcraft.war>"]
+edition = "2024"
+rust-version = "1.85"
+authors = ["Oppenheymu <oppenheymu@gmail.com>"]
 license = "MIT"
+description = "A high-performance multiplayer text crafting game server"
+repository = "https://github.com/textcraftwar/textcraftwar"
+readme = "README.md"
+keywords = ["game", "multiplayer", "text", "crafting", "server"]
+categories = ["games", "web-programming"]
 
 [workspace.dependencies]
 # Async Runtime & Network
@@ -35,7 +41,65 @@ protocol = { path = "crates/protocol" }
 storage = { path = "crates/storage" }
 server = { path = "crates/server" }
 
-# 位于根目录 Cargo.toml 末尾
+# ──────────────────────────────────────────────
+# 最高性能 Release Profile
+# ──────────────────────────────────────────────
+[profile.release]
+opt-level = 3       # 最高优化等级
+lto = "fat"         # 胖 LTO，跨 crate 内联优化
+codegen-units = 1   # 单编译单元，最大化内联 / 去虚拟化
+panic = "abort"     # 去除 unwinding 表，缩小体积 + 加速
+strip = "symbols"   # 剥离符号表
+incremental = false # 非增量编译，避免额外开销
 
+# 生产级 dev profile：依赖 crate 做优化，加快调试速度
+[profile.dev]
+opt-level = 0
+
+[profile.dev.package."*"]
+opt-level = 2 # 对依赖开启优化，大幅提升 debug 构建速度
+
+# ──────────────────────────────────────────────
+# 最严格 Workspace Lints
+# ──────────────────────────────────────────────
 [workspace.lints.rust]
-unsafe_code = "forbid" # 比 deny 更严格，禁止在子 crate 中通过 #[allow(unsafe_code)] 局部关掉限制
+unsafe_code = "forbid"
+rust_2018_idioms = { level = "warn", priority = -1 }
+rust_2024_compatibility = { level = "warn", priority = -1 }
+unreachable_pub = "warn"
+unused_qualifications = "warn"
+unused_lifetimes = "warn"
+unused_crate_dependencies = "warn"
+variant_size_differences = "warn"
+missing_docs = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(tokio_unstable)"] }
+elided_lifetimes_in_paths = "warn"
+elided_lifetimes_in_associated_constant = "warn"
+deprecated_safe = "warn"
+keyword_idents = "warn"
+missing_abi = "warn"
+non_ascii_idents = "warn"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unit_bindings = "warn"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+cargo = "warn"
+# 允许过于嘈杂的 pedantic lints
+module_name_repetitions = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
+doc_markdown = "allow"
+if_not_else = "allow"
+module_inception = "allow"
