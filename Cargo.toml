@@ -16,13 +16,13 @@ keywords = ["game", "multiplayer", "text", "crafting", "server"]
 categories = ["games", "web-programming"]
 
 [workspace.dependencies]
-# Async Runtime & Network
+# 异步运行时与网络
 tokio = { version = "1.38", features = ["full"] }
 axum = { version = "0.7", features = ["ws"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# Storage & Caching
+# 存储与缓存
 sea-orm = { version = "1.0", features = [
     "sqlx-sqlite",
     "runtime-tokio-rustls",
@@ -30,76 +30,120 @@ sea-orm = { version = "1.0", features = [
 ] }
 moka = { version = "0.12", features = ["future"] }
 
-# i18n & Utils
+# 国际化与工具
 fluent = "0.16"
 unic-langid = "0.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# Internal Workspace
+# 工作区内部 crate
 protocol = { path = "crates/protocol" }
 storage = { path = "crates/storage" }
 server = { path = "crates/server" }
 
-# ──────────────────────────────────────────────
-# 最高性能 Release Profile
-# ──────────────────────────────────────────────
+# Release：最大化优化与体积压缩
 [profile.release]
-opt-level = 3       # 最高优化等级
-lto = "fat"         # 胖 LTO，跨 crate 内联优化
-codegen-units = 1   # 单编译单元，最大化内联 / 去虚拟化
-panic = "abort"     # 去除 unwinding 表，缩小体积 + 加速
-strip = "symbols"   # 剥离符号表
-incremental = false # 非增量编译，避免额外开销
+# 最高优化等级
+opt-level = 3
+# 胖 LTO，跨 crate 内联优化
+lto = "fat"
+# 单编译单元，最大化内联与去虚拟化
+codegen-units = 1
+# 去除 unwinding 表，缩小体积并加速
+panic = "abort"
+# 剥离符号表
+strip = "symbols"
+# 非增量编译，避免额外开销
+incremental = false
 
-# 生产级 dev profile：依赖 crate 做优化，加快调试速度
+# dev：本地 crate 不优化以加快编译
 [profile.dev]
 opt-level = 0
 
 [profile.dev.package."*"]
-opt-level = 2 # 对依赖开启优化，大幅提升 debug 构建速度
+# 对依赖开启优化，加快 debug 构建运行速度
+opt-level = 2
 
-# ──────────────────────────────────────────────
-# 最严格 Workspace Lints
-# ──────────────────────────────────────────────
+# Workspace lints：统一严格质量门槛，默认 deny
 [workspace.lints.rust]
 unsafe_code = "forbid"
-rust_2018_idioms = { level = "warn", priority = -1 }
-rust_2024_compatibility = { level = "warn", priority = -1 }
-unreachable_pub = "warn"
-unused_qualifications = "warn"
-unused_lifetimes = "warn"
-unused_crate_dependencies = "warn"
-variant_size_differences = "warn"
-missing_docs = "warn"
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(tokio_unstable)"] }
-elided_lifetimes_in_paths = "warn"
-elided_lifetimes_in_associated_constant = "warn"
-deprecated_safe = "warn"
-keyword_idents = "warn"
-missing_abi = "warn"
-non_ascii_idents = "warn"
-single_use_lifetimes = "warn"
-trivial_casts = "warn"
-trivial_numeric_casts = "warn"
-unit_bindings = "warn"
+rust_2018_idioms = { level = "deny", priority = -1 }
+rust_2024_compatibility = { level = "deny", priority = -1 }
+unreachable_pub = "deny"
+unused_qualifications = "deny"
+unused_lifetimes = "deny"
+unused_crate_dependencies = "deny"
+variant_size_differences = "deny"
+missing_docs = "deny"
+unexpected_cfgs = { level = "deny", check-cfg = ["cfg(tokio_unstable)"] }
+elided_lifetimes_in_paths = "deny"
+elided_lifetimes_in_associated_constant = "deny"
+deprecated_safe = "deny"
+keyword_idents = "deny"
+missing_abi = "deny"
+non_ascii_idents = "deny"
+single_use_lifetimes = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+unit_bindings = "deny"
 
 [workspace.lints.clippy]
-all = "warn"
-pedantic = "warn"
-nursery = "warn"
-cargo = "warn"
-# 允许过于嘈杂的 pedantic lints
+all = "deny"
+pedantic = "deny"
+nursery = "deny"
+cargo = "deny"
+restriction = "deny"
+# 安全 / 质量：显式 deny，防止 restriction 组漂移
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unwrap_in_result = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+string_slice = "deny"
+arithmetic_side_effects = "deny"
+float_arithmetic = "deny"
+wildcard_enum_match_arm = "deny"
+cast_precision_loss = "deny"
+cast_possible_truncation = "deny"
+cast_sign_loss = "deny"
+exit = "deny"
+needless_pass_by_ref_mut = "deny"
+use_self = "deny"
+default_trait_access = "deny"
+let_underscore_must_use = "deny"
+# 不可避免的例外豁免
+# 代码风格 / 命名
 module_name_repetitions = "allow"
-similar_names = "allow"
-too_many_lines = "allow"
-cast_precision_loss = "allow"
-cast_possible_truncation = "allow"
-cast_sign_loss = "allow"
+must_use_candidate = "allow"
+# 文档：已 deny panic!/unwrap/expect，理论不会 panic，文档可豁免
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
-must_use_candidate = "allow"
-return_self_not_must_use = "allow"
-doc_markdown = "allow"
-if_not_else = "allow"
-module_inception = "allow"
+# restriction 组中过于激进、真实项目无法遵守
+blanket_clippy_restriction_lints = "allow"
+missing_docs_in_private_items = "allow"
+min_ident_chars = "allow"
+separated_literal_suffix = "allow"
+mod_module_files = "allow"
+self_named_module_files = "allow"
+implicit_return = "allow"
+std_instead_of_core = "allow"
+std_instead_of_alloc = "allow"
+pub_use = "allow"
+missing_trait_methods = "allow"
+single_call_fn = "allow"
+pattern_type_mismatch = "allow"
+
+# Rustdoc：文档质量门槛
+[workspace.lints.rustdoc]
+all = "deny"
+missing_crate_level_docs = "deny"
+broken_intra_doc_links = "deny"
+private_intra_doc_links = "deny"
+invalid_codeblock_attributes = "deny"
+invalid_rust_codeblocks = "deny"
+redundant_explicit_links = "deny"

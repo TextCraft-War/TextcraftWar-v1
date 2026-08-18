@@ -1,3 +1,4 @@
+# 依赖图：声明需要扫描的目标平台三元组
 [graph]
 targets = [
     { triple = "x86_64-pc-windows-msvc" },
@@ -5,20 +6,26 @@ targets = [
     { triple = "x86_64-unknown-linux-musl" },
 ]
 
+# 安全公告：基于 RustSec Advisory DB 检查已知漏洞、未维护与已撤回的 crate
 [advisories]
 db-url = "https://github.com/rustsec/advisory-db"
 db-path = "$CARGO_HOME/advisory-dbs"
 vulnerability = "deny"
+# 未维护仅告警：部分传递依赖无法替换，避免阻塞 CI
 unmaintained = "warn"
 unsound = "deny"
 yanked = "deny"
 notice = "warn"
 ignore = []
 
+# 许可证合规：拒绝未授权或不符合 OSI/FSF 标准的许可证
 [licenses]
 unlicensed = "deny"
+# 接受 OSI 或 FSF 任一认可的许可证
 allow-osi-fsf-free = "either"
+# 许可证文本匹配的最低置信度阈值
 confidence-threshold = 0.8
+# copyleft 仅告警：需人工评估是否与项目兼容
 copyleft = "warn"
 allow = [
     "MIT",
@@ -33,13 +40,16 @@ allow = [
 ]
 exceptions = []
 
+# 依赖禁用：控制重复版本、通配符版本与黑名单
 [bans]
+# 重复版本仅告警：部分传递依赖难以避免重复
 multiple-versions = "warn"
 wildcards = "deny"
 deny = []
 skip = []
 skip-tree = []
 
+# 源：仅允许 crates.io，禁止任意 registry 或 git 依赖
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"

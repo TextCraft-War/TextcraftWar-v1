@@ -2,4 +2,5 @@
 channel = "1.97.0"
 profile = "default"
 components = ["rustfmt", "clippy", "rust-analyzer"]
+# 预下载的交叉编译目标平台
 targets = ["x86_64-pc-windows-msvc"]
