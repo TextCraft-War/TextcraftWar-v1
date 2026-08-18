@@ -1,6 +1,7 @@
 {
     "material-icon-theme.folders.associations": {
         "storage": "database",
-        "protocol": "api"
+        "protocol": "api",
+        "entities": "Mappings"
     }
 }

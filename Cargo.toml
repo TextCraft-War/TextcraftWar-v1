@@ -78,8 +78,8 @@ missing_docs = "deny"
 unexpected_cfgs = { level = "deny", check-cfg = ["cfg(tokio_unstable)"] }
 elided_lifetimes_in_paths = "deny"
 elided_lifetimes_in_associated_constant = "deny"
-deprecated_safe = "deny"
-keyword_idents = "deny"
+deprecated_safe = { level = "deny", priority = -1 }
+keyword_idents = { level = "deny", priority = -1 }
 missing_abi = "deny"
 non_ascii_idents = "allow"
 single_use_lifetimes = "deny"
@@ -117,6 +117,14 @@ exit = "deny"
 needless_pass_by_ref_mut = "deny"
 use_self = "deny"
 default_trait_access = "deny"
+# 异步与并发（原误写在 .clippy.toml，此处为正确位置）
+await_holding_lock = "deny"
+large_futures = "deny"
+verbose_file_reads = "warn"
+# 显式风格约束（原误写在 .clippy.toml）
+implicit_return = "warn"
+indexing_slicing = "warn"
+arithmetic_side_effects = "warn"
 
 # pedantic 中过于激进的子规则：豁免
 module_name_repetitions = "allow"
