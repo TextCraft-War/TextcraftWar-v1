@@ -1,0 +1,28 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "TextcraftWar Workspace Config Schema",
+    "type": "object",
+    "properties": {
+        "workspace": {
+            "type": "object",
+            "properties": {
+                "resolver": {
+                    "type": "string",
+                    "enum": [
+                        "2"
+                    ]
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "resolver",
+                "members"
+            ]
+        }
+    }
+}

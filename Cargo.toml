@@ -1,0 +1,41 @@
+#:schema ./schema.json
+[workspace]
+resolver = "2"
+members = ["crates/protocol", "crates/storage", "crates/server"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Developer <dev@textcraft.war>"]
+license = "MIT"
+
+[workspace.dependencies]
+# Async Runtime & Network
+tokio = { version = "1.38", features = ["full"] }
+axum = { version = "0.7", features = ["ws"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Storage & Caching
+sea-orm = { version = "1.0", features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+] }
+moka = { version = "0.12", features = ["future"] }
+
+# i18n & Utils
+fluent = "0.16"
+unic-langid = "0.9"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Internal Workspace
+protocol = { path = "crates/protocol" }
+storage = { path = "crates/storage" }
+server = { path = "crates/server" }
+
+# 位于根目录 Cargo.toml 末尾
+
+[workspace.lints.rust]
+unsafe_code = "forbid" # 比 deny 更严格，禁止在子 crate 中通过 #[allow(unsafe_code)] 局部关掉限制

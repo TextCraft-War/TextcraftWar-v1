@@ -1,0 +1,7 @@
+edition = "2026"
+max_width = 100
+tab_spaces = 4
+use_small_heuristics = "Default"
+newline_style = "Unix"
+reorder_imports = true
+format_code_in_doc_comments = true

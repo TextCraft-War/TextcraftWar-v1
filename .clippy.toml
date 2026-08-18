@@ -1,0 +1,8 @@
+# 限制单函数复杂度和行数
+too-many-lines-threshold = 100
+cognitive-complexity-threshold = 20
+
+# 防范并发死锁与性能开销
+await-holding-lock = "deny"
+large-futures = "deny"
+verbose-file-reads = "warn"
