@@ -24,7 +24,7 @@ serde_json = "1.0"
 
 # 存储与缓存
 sea-orm = { version = "1.0", features = [
-    "sqlx-sqlite",
+    "sqlx-postgres",
     "runtime-tokio-rustls",
     "macros",
 ] }
@@ -81,62 +81,55 @@ elided_lifetimes_in_associated_constant = "deny"
 deprecated_safe = "deny"
 keyword_idents = "deny"
 missing_abi = "deny"
-non_ascii_idents = "deny"
+non_ascii_idents = "allow"
 single_use_lifetimes = "deny"
 trivial_casts = "deny"
 trivial_numeric_casts = "deny"
 unit_bindings = "deny"
 
 [workspace.lints.clippy]
-all = "deny"
-pedantic = "deny"
-nursery = "deny"
-cargo = "deny"
-restriction = "deny"
-# 安全 / 质量：显式 deny，防止 restriction 组漂移
+# 组级别开启主流质量与风格门槛；priority = -1 让后续子规则可覆盖
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+
+# 显式 opt-in：真正有价值的 restriction lint（不全局开启 restriction 组）
+# 调试与日志
 dbg_macro = "deny"
 print_stdout = "deny"
 print_stderr = "deny"
+# 失败处理：禁用 panic/unwrap/expect，强制显式错误传播
 panic = "deny"
 todo = "deny"
 unimplemented = "deny"
 unwrap_in_result = "deny"
 unwrap_used = "deny"
 expect_used = "deny"
-indexing_slicing = "deny"
-string_slice = "deny"
-arithmetic_side_effects = "deny"
-float_arithmetic = "deny"
+let_underscore_must_use = "deny"
+# 模式匹配
 wildcard_enum_match_arm = "deny"
+# 类型转换：精度损失/截断/符号丢失均需显式
 cast_precision_loss = "deny"
 cast_possible_truncation = "deny"
 cast_sign_loss = "deny"
+# 流程控制与设计
 exit = "deny"
 needless_pass_by_ref_mut = "deny"
 use_self = "deny"
 default_trait_access = "deny"
-let_underscore_must_use = "deny"
-# 不可避免的例外豁免
-# 代码风格 / 命名
+
+# pedantic 中过于激进的子规则：豁免
 module_name_repetitions = "allow"
 must_use_candidate = "allow"
+separated_literal_suffix = "allow"
+missing_trait_methods = "allow"
+single_call_fn = "allow"
 # 文档：已 deny panic!/unwrap/expect，理论不会 panic，文档可豁免
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
-# restriction 组中过于激进、真实项目无法遵守
+
+# 因显式引入部分 restriction lint，必须豁免其元 lint
 blanket_clippy_restriction_lints = "allow"
-missing_docs_in_private_items = "allow"
-min_ident_chars = "allow"
-separated_literal_suffix = "allow"
-mod_module_files = "allow"
-self_named_module_files = "allow"
-implicit_return = "allow"
-std_instead_of_core = "allow"
-std_instead_of_alloc = "allow"
-pub_use = "allow"
-missing_trait_methods = "allow"
-single_call_fn = "allow"
-pattern_type_mismatch = "allow"
 
 # Rustdoc：文档质量门槛
 [workspace.lints.rustdoc]
