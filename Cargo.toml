@@ -32,6 +32,7 @@ moka = { version = "0.12", features = ["future"] }
 
 # 国际化与工具
 fluent = "0.16"
+thiserror = "2"
 unic-langid = "0.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -123,6 +124,9 @@ large_futures = "deny"
 verbose_file_reads = "warn"
 # 显式风格约束（原误写在 .clippy.toml）
 implicit_return = "warn"
+# 与 implicit_return 成对：后者要求显式 return，本规则却惩罚尾部 return，
+# 二者在 -D warnings 下矛盾，取"显式 return"风格须豁免本规则
+needless_return = "allow"
 indexing_slicing = "warn"
 arithmetic_side_effects = "warn"
 
