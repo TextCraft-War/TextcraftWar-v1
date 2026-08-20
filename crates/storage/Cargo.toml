@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 sea-orm.workspace = true
 serde.workspace = true
+thiserror.workspace = true
 # 待缓存层/异步层代码接入后启用：
 # moka.workspace = true
 # tokio.workspace = true
