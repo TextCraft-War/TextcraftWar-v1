@@ -7,26 +7,30 @@ targets = [
 ]
 
 # 安全公告：基于 RustSec Advisory DB 检查已知漏洞、未维护与已撤回的 crate
+# v2 schema 变更说明（cargo-deny >= 0.16）：
+#   - db-url → db-urls（支持多库，故为数组）
+#   - vulnerability / notice / severity-threshold 已移除：对应公告一律按 error 处理，
+#     无法再通过配置降级为告警；如需放行请把公告 ID 加进 ignore
+#   - unmaintained / unsound 由「告警级别」改为「扫描范围」：
+#     all = 所有 crate 判失败；workspace = 仅工作区直接依赖判失败（传递依赖忽略）；
+#     transitive = 仅传递依赖判失败；none = 完全忽略
 [advisories]
-db-url = "https://github.com/rustsec/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
 db-path = "$CARGO_HOME/advisory-dbs"
-vulnerability = "deny"
-# 未维护仅告警：部分传递依赖无法替换，避免阻塞 CI
-unmaintained = "warn"
-unsound = "deny"
+# 未维护：只对「工作区直接依赖」判失败，传递依赖不再阻塞 CI。
+# 注：v2 下未维护公告恒为 error，已无法像旧配置那样「仅告警」，只能用范围收窄。
+unmaintained = "workspace"
+# unsound：所有层级一律判失败，对齐 AGENTS.md「禁止引入 unsound 的 crate」。
+unsound = "all"
+# 已撤回版本：直接拒绝
 yanked = "deny"
-notice = "warn"
 ignore = []
 
-# 许可证合规：拒绝未授权或不符合 OSI/FSF 标准的许可证
+# 许可证合规：v2 下 unlicensed / copyleft / allow-osi-fsf-free / default 均已移除，
+# 统一改为「未显式列入 allow 即拒绝」，因此下面 allow 即完整白名单。
 [licenses]
-unlicensed = "deny"
-# 接受 OSI 或 FSF 任一认可的许可证
-allow-osi-fsf-free = "either"
 # 许可证文本匹配的最低置信度阈值
 confidence-threshold = 0.8
-# copyleft 仅告警：需人工评估是否与项目兼容
-copyleft = "warn"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -37,6 +41,9 @@ allow = [
     "Unicode-3.0",
     "Zlib",
     "MPL-2.0",
+    # webpki-roots（sqlx → sea-orm 的传递依赖，无法避免）使用此许可证。
+    # v2 下不再有 allow-osi-fsf-free，必须逐条显式声明。
+    "CDLA-Permissive-2.0",
 ]
 exceptions = []
 
