@@ -41,10 +41,10 @@ mod tests {
     #[test]
     fn 迁移文件已内嵌() {
         let 迁移集 = sqlx::migrate!("./migrations");
-        assert_eq!(迁移集.migrations.len(), 1);
+        assert!(!迁移集.migrations.is_empty(), "迁移目录没被内嵌");
+        assert!(迁移集.migrations.iter().all(|迁移| !迁移.sql.is_empty()));
 
-        let 首个 = 迁移集.migrations.first().expect("迁移集不该为空");
-        assert_eq!(首个.version, 1);
-        assert!(!首个.sql.is_empty());
+        let 首版 = 迁移集.migrations.first().expect("迁移集不该为空");
+        assert_eq!(首版.version, 1, "第一份迁移必须是基础类型");
     }
 }

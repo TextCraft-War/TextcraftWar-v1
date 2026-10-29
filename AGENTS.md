@@ -57,7 +57,11 @@ domain -> 无
 ## 五、数据库规范
 
 - 仅 PostgreSQL。连接池用 `sqlx::postgres::PgPoolOptions` 配置。
-- 表名、键名使用中文。**注意**:中文标识符在 SQL 里必须双引号(`"玩家"`),写 SQL 时别漏。
+- 表名、键名使用中文,**不写双引号**。PostgreSQL 只折叠 ASCII 大写字母,中文标识符原样保留
+  (`SELECT 名称 FROM 联军` 与 `SELECT "名称" FROM "联军"` 等价);只有含空格、ASCII 大写或保留字的
+  标识符才需要引号,本项目不使用这类名字。
+- 计数列用 DOMAIN `非负计数`,时间列用 `时间戳`(`BIGINT` + Unix 秒),不要逐列重复
+  `NOT NULL DEFAULT 0 CHECK (... >= 0)`;语义用 `COMMENT ON` 写进数据库目录。
 - 枚举列一律存 `TEXT`,不要用 PG 的 `enum` 类型:`storage` 里用 `String` 读出,
   再 `TryFrom` 成 domain 的枚举——这样加枚举变体不需要 `ALTER TYPE`,也不会把 DB 类型绑进 Rust 类型。
 - 战争结算等高并发写路径:

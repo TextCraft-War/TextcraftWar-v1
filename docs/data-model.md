@@ -9,8 +9,11 @@
 
 这五条适用于所有表，后面不再逐条重复：
 
-1. 表名、列名用中文；SQL 里必须加双引号（`"玩家"`）。
-2. 所有时间列是 `BIGINT`，存 **Unix 秒**。不用 `TIMESTAMP`——跨时区、跨平台，整数最省事。
+1. 表名、列名用中文，**不写双引号**。PostgreSQL 只折叠 ASCII 大写字母，中文标识符原样保留：
+   `SELECT 名称 FROM 联军` 与 `SELECT "名称" FROM "联军"` 等价。
+   只有含空格 / ASCII 大写 / 保留字的标识符才需要引号——本项目不用这种名字（D20）。
+2. 计数列用 DOMAIN `非负计数`，时间列用 `时间戳`（`BIGINT` + Unix 秒），不要逐列写
+   `NOT NULL DEFAULT 0 CHECK (… >= 0)`。不用 `TIMESTAMP`：跨时区、跨平台，整数最省事。见 4.0。
 3. **不建物理外键。** 全部是逻辑引用，一致性由应用层的事务保证。
    原因：联军会解散、地区会易主，物理外键的级联语义在这里全是错的。
 4. 枚举列一律存 `TEXT`（英文小写），读出后在 `storage` 里 `TryFrom` 成领域枚举。
@@ -39,7 +42,7 @@
 所以只用一张 `库存` 表，用 `所有者类型 + 所有者_id` 区分归属。
 
 ```sql
-库存(所有者类型 TEXT, 所有者_id BIGINT, 物品 TEXT, 数量 BIGINT)
+库存(所有者类型 TEXT, 所有者_id BIGINT, 物品 TEXT, 数量 非负计数)
 主键 (所有者类型, 所有者_id, 物品)
 ```
 
@@ -80,20 +83,45 @@ pub enum 物品 {
 
 ## 四、表定义
 
+### 4.0 基础类型（DOMAIN）
+
+重复的 `BIGINT NOT NULL DEFAULT 0 CHECK (VALUE >= 0)` 收进 PostgreSQL 的 DOMAIN，
+表定义里只写语义名字：
+
+| DOMAIN | 底层类型 | 约束 | 用在哪 |
+|---|---|---|---|
+| `非负计数` | `BIGINT` | `NOT NULL DEFAULT 0 CHECK (VALUE >= 0)` | 工人、私军、科技、工资、联军军队、驻军、库存数量 |
+| `时间戳` | `BIGINT` | `NOT NULL` | 所有 `创建时间` / `绑定时间`（Unix 秒） |
+| `百分比` | `INT` | `NOT NULL DEFAULT 0 CHECK (VALUE BETWEEN 0 AND 100)` | 地区建筑的 `完成度` |
+| `地区uid` | `INT` | `NOT NULL CHECK (VALUE BETWEEN 100000 AND 999999)` | 地区的 `uid` |
+
+`稳定度` 故意不用 `非负计数`——它可以是负数。
+
+为什么用 DOMAIN 而不是每列各写一遍 CHECK：
+
+- 约束只写一次。加一个计数字段不用再抄一行 `CHECK (… >= 0)`，也不会漏写。
+- 语义写在列名右边（`驻军 非负计数`），比 `BIGINT NOT NULL DEFAULT 0 CHECK (…)` 好读得多。
+- 改约束用 `ALTER DOMAIN … ADD CONSTRAINT`，不用动几十张表。
+
+已验证（2026-10-29）：sqlx 0.8.6 读写 DOMAIN 列正常——PostgreSQL 在结果集描述里报的是
+**底层类型**，`i64` 照样解得出来，`query_as` 不需要任何 cast。
+
+> DOMAIN 定在 [`0001_基础类型.sql`](../crates/storage/migrations/0001_基础类型.sql)。
+
 ### 4.1 `玩家`
 
 | 列 | 类型 | 约束 | 说明 |
 |---|---|---|---|
 | `id` | `BIGSERIAL` | `PRIMARY KEY` | 内部主键，不对外暴露 |
-| `工人` | `BIGINT` | `NOT NULL DEFAULT 0` | 从事生产的人口 |
-| `私军` | `BIGINT` | `NOT NULL DEFAULT 0` | **操作兵器的兵员**，与工人争抢同一批人口 |
-| `科技` | `BIGINT` | `NOT NULL DEFAULT 0` | 解锁军备的门槛 |
+| `工人` | `非负计数` | | 从事生产的人口 |
+| `私军` | `非负计数` | | **操作兵器的兵员**，与工人争抢同一批人口 |
+| `科技` | `非负计数` | | 解锁军备的门槛 |
 | `稳定度` | `BIGINT` | `NOT NULL DEFAULT 50` | **可以为负**；负值不能生产 |
-| `工资` | `BIGINT` | `NOT NULL DEFAULT 0` | 高于基准提升稳定度 |
+| `工资` | `非负计数` | | 高于基准提升稳定度 |
 | `联军_id` | `BIGINT` | `NULL` | 逻辑引用 `联军.id` |
 | `联军职务` | `TEXT` | `NOT NULL DEFAULT 'member'` | `member` / `officer` / `leader` |
 | `出生保护至` | `BIGINT` | `NULL` | Unix 秒；`NULL` = 已过保护 |
-| `创建时间` | `BIGINT` | `NOT NULL` | |
+| `创建时间` | `时间戳` | | |
 
 索引：`玩家 (联军_id)`。
 
@@ -105,19 +133,19 @@ pub enum 物品 {
 |---|---|---|---|
 | `id` | `BIGSERIAL` | `PRIMARY KEY` | |
 | `名称` | `TEXT` | `NOT NULL UNIQUE` | |
-| `联军军队` | `BIGINT` | `NOT NULL DEFAULT 0` | 共享兵员，**驻军的唯一来源** |
-| `创建时间` | `BIGINT` | `NOT NULL` | |
+| `联军军队` | `非负计数` | | 共享兵员，**驻军的唯一来源** |
+| `创建时间` | `时间戳` | | |
 
 ### 4.3 `地区`
 
 | 列 | 类型 | 约束 | 说明 |
 |---|---|---|---|
 | `id` | `BIGSERIAL` | `PRIMARY KEY` | 内部主键 |
-| `uid` | `INT` | `NOT NULL UNIQUE` | **对外访问凭证**，6 位数字，保密 |
+| `uid` | `地区uid` | `UNIQUE` | **对外访问凭证**，6 位数字，保密 |
 | `名称` | `TEXT` | `NOT NULL` | |
 | `控制方_联军_id` | `BIGINT` | `NULL` | 逻辑引用 `联军.id`；`NULL` = 无主 |
-| `驻军` | `BIGINT` | `NOT NULL DEFAULT 0` | 从联军军队转化而来 |
-| `创建时间` | `BIGINT` | `NOT NULL` | |
+| `驻军` | `非负计数` | | 从联军军队转化而来 |
+| `创建时间` | `时间戳` | | |
 
 索引：`地区 (控制方_联军_id)`。
 
@@ -133,9 +161,9 @@ pub enum 物品 {
 |---|---|---|---|
 | `地区_id` | `BIGINT` | `NOT NULL` | |
 | `建筑` | `TEXT` | `NOT NULL` | 建筑编码，如 `school`；清单待定 |
-| `完成度` | `INT` | `NOT NULL DEFAULT 0` | `0..=100` |
+| `完成度` | `百分比` | | `0..=100` |
 
-主键：`(地区_id, 建筑)`。约束：`CHECK ("完成度" BETWEEN 0 AND 100)`。
+主键：`(地区_id, 建筑)`。`0..=100` 的约束来自 `百分比` 这个 DOMAIN，不单独写 CHECK。
 
 > ✅ **一种建筑在一个地区只有一份**，用 **0–100 的完成度**表示进度，到阈值才解锁效果。
 > 原版就是这样：学校完成度 60% 才能"城市招募工人"，炼钢厂 70% 才能炼钢。
@@ -156,7 +184,7 @@ pub enum 物品 {
 | `玩家_id` | `BIGINT` | `NOT NULL` | |
 | `平台` | `TEXT` | `NOT NULL` | `onebot` / `discord` / `telegram` |
 | `平台_uid` | `TEXT` | `NOT NULL` | 平台侧用户 id |
-| `绑定时间` | `BIGINT` | `NOT NULL` | |
+| `绑定时间` | `时间戳` | | |
 
 约束：`UNIQUE (平台, 平台_uid)` —— 一个平台账号只能绑一个玩家。
 索引：`平台绑定 (玩家_id)`。
@@ -169,7 +197,7 @@ pub enum 物品 {
 | `地区_id` | `BIGINT` | `NOT NULL` | |
 | `平台` | `TEXT` | `NOT NULL` | |
 | `频道_id` | `TEXT` | `NOT NULL` | 群 / 频道 id |
-| `绑定时间` | `BIGINT` | `NOT NULL` | |
+| `绑定时间` | `时间戳` | | |
 
 约束：`UNIQUE (平台, 频道_id)` —— 一个频道只能属于一个地区。
 反向**不唯一**：一个地区可以绑多个频道（这正是跨平台共享的实现方式）。
