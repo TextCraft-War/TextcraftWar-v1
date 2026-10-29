@@ -8,17 +8,13 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-# 待服务器代码接入后启用（当前为纯占位，全部注释，
-# 否则 `unused_crate_dependencies` 会报错）：
-# domain.workspace = true
-# protocol.workspace = true
-# storage.workspace = true
-# tokio.workspace = true
-# axum.workspace = true
-# serde.workspace = true
-# serde_json.workspace = true
-# tracing.workspace = true
-# tracing-subscriber.workspace = true
+axum.workspace = true
+protocol.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true
