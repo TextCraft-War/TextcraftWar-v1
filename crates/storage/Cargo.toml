@@ -1,6 +1,6 @@
 [package]
 name = "storage"
-description = "SeaORM-based persistent storage layer with Moka caching"
+description = "基于 sqlx 的持久化层：SQL 与「数据库行 <-> domain 类型」的翻译"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,11 +8,11 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-sea-orm.workspace = true
-serde.workspace = true
-thiserror.workspace = true
-# 待缓存层/异步层代码接入后启用：
-# moka.workspace = true
+# 待表与数据访问代码接入后启用（当前为纯占位，全部注释，
+# 否则 `unused_crate_dependencies` 会报错）：
+# sqlx.workspace = true
+# domain.workspace = true
+# thiserror.workspace = true
 # tokio.workspace = true
 
 [lints]
