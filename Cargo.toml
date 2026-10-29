@@ -1,7 +1,7 @@
 #:schema ./schema.json
 [workspace]
-resolver = "2"
-members = ["crates/protocol", "crates/storage", "crates/server"]
+resolver = "3"
+members = ["crates/domain", "crates/protocol", "crates/storage", "crates/server"]
 
 [workspace.package]
 version = "0.1.0"
@@ -9,35 +9,48 @@ edition = "2024"
 rust-version = "1.85"
 authors = ["Oppenheymu <oppenheymu@gmail.com>"]
 license = "MIT"
-description = "A high-performance multiplayer text crafting game server"
+description = "A high-performance multiplayer text strategy game server"
 repository = "https://github.com/textcraftwar/textcraftwar"
-readme = "README.md"
-keywords = ["game", "multiplayer", "text", "crafting", "server"]
+keywords = ["game", "multiplayer", "text", "strategy", "server"]
 categories = ["games", "web-programming"]
 
 [workspace.dependencies]
-# 异步运行时与网络
-tokio = { version = "1.38", features = ["full"] }
-axum = { version = "0.7", features = ["ws"] }
+# 异步运行时与网络：只启用实际用得到的 feature，不用 "full"
+tokio = { version = "1.40", features = [
+    "rt-multi-thread",
+    "net",
+    "macros",
+    "time",
+    "sync",
+    "signal",
+] }
+axum = { version = "0.8", features = ["ws"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# 存储与缓存
-sea-orm = { version = "1.0", features = [
-    "sqlx-postgres",
-    "runtime-tokio-rustls",
+# 持久化：sqlx 直写 SQL，没有 ORM 魔法。
+# 刻意不带 `sqlx::query!` 之外需要的构建期数据库：默认用 `query_as` 运行期校验，
+# 保证 `cargo check` 在没连 PostgreSQL 的机器（含 CI/新克隆）上也能过。
+sqlx = { version = "0.8", default-features = false, features = [
+    "postgres",
+    "runtime-tokio",
+    "tls-rustls",
     "macros",
+    "migrate",
 ] }
-moka = { version = "0.12", features = ["future"] }
 
-# 国际化与工具
-fluent = "0.16"
+# 工具
 thiserror = "2"
-unic-langid = "0.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# i18n：v1 只有中文，先不引入。等多语言是真实需求时再启用
+# （注意 fluent 的 FluentBundle 不是 Sync，届时需要单独的渲染线程方案）。
+# fluent = "0.17"
+# unic-langid = "0.9"
+
 # 工作区内部 crate
+domain = { path = "crates/domain" }
 protocol = { path = "crates/protocol" }
 storage = { path = "crates/storage" }
 server = { path = "crates/server" }

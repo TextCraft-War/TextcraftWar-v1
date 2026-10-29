@@ -1,0 +1,16 @@
+[package]
+name = "domain"
+description = "纯游戏规则：零 IO、零 async、零外部依赖"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# 刻意保持为空。这不是疏忽，是这个 crate 存在的全部意义：
+# 想让任何人（包括 AI）在这里 use 数据库、use JSON、或者写 async，都会编译失败。
+# 规则层只允许纯函数。
+
+[lints]
+workspace = true

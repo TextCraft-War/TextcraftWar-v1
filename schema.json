@@ -9,7 +9,8 @@
                 "resolver": {
                     "type": "string",
                     "enum": [
-                        "2"
+                        "2",
+                        "3"
                     ]
                 },
                 "members": {

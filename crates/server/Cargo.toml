@@ -1,6 +1,6 @@
 [package]
 name = "server"
-description = "Axum-based WebSocket game server for TextcraftWar"
+description = "基于 axum 的 WebSocket 服务器：文本命令解析与编排"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,15 +8,15 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-# 待服务器代码接入后启用：
+# 待服务器代码接入后启用（当前为纯占位，全部注释，
+# 否则 `unused_crate_dependencies` 会报错）：
+# domain.workspace = true
 # protocol.workspace = true
 # storage.workspace = true
 # tokio.workspace = true
 # axum.workspace = true
 # serde.workspace = true
 # serde_json.workspace = true
-# fluent.workspace = true
-# unic-langid.workspace = true
 # tracing.workspace = true
 # tracing-subscriber.workspace = true
 
