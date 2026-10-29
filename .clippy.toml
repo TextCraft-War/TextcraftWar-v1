@@ -1,15 +1,22 @@
 # 仅存放 clippy 的"配置字段"（阈值等）；
 # lint 级别统一在根 Cargo.toml 的 [workspace.lints.clippy] 声明。
 
-# 限制单函数复杂度和行数
-too-many-lines-threshold = 80
-cognitive-complexity-threshold = 15
-
-# 限制函数参数数量
-too-many-arguments-threshold = 6
+# ---- 复杂度阈值 ----
+# 游戏结算/公式函数天然偏长，卡 80 行只会逼出一堆碎片函数。
+# 可读性交给 review，不交给行数计数器。
+too-many-lines-threshold = 200
+cognitive-complexity-threshold = 25
+too-many-arguments-threshold = 10
 
 # 类型复杂度
 type-complexity-threshold = 250
 
 # 枚举变体大小
 enum-variant-size-threshold = 200
+
+# ---- 测试代码豁免 ----
+# 测试里断言失败就该直接炸；否则每个测试都要手写 #[allow]。
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-dbg-in-tests = true

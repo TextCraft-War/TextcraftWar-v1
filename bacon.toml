@@ -5,6 +5,13 @@ command = ["cargo", "check", "--color", "always"]
 need_stdout = false
 
 [jobs.clippy]
+# 注意：这里**不加** `-D warnings`。`pedantic`/`nursery` 现在是 warn，
+# 若加 -D warnings 会把它们的警告也提升为错误，等于把刚松绑的门槛又拧回去。
+# 需要「零警告」的严格校验时用 clippy-strict。
+command = ["cargo", "clippy", "--color", "always"]
+need_stdout = false
+
+[jobs.clippy-strict]
 command = ["cargo", "clippy", "--color", "always", "--", "-D", "warnings"]
 need_stdout = false
 
