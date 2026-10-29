@@ -8,12 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-# 待表与数据访问代码接入后启用（当前为纯占位，全部注释，
-# 否则 `unused_crate_dependencies` 会报错）：
-# sqlx.workspace = true
-# domain.workspace = true
-# thiserror.workspace = true
-# tokio.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true

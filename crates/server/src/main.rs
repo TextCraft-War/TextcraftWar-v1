@@ -18,6 +18,11 @@ use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _
 pub(crate) struct 状态 {
     /// 握手用的共享密钥。
     pub(crate) 令牌: Arc<str>,
+    /// 数据库连接池。事务边界由 `server` 掌握，所以池放在这里。
+    ///
+    /// S2 起 `command` 要用它查频道与玩家，届时这条 `expect` 会失效并提醒删掉。
+    #[expect(dead_code, reason = "S2 的 command 路由才会读它")]
+    pub(crate) 池: storage::连接池,
 }
 
 /// 启动期错误。
@@ -34,6 +39,9 @@ enum 启动错误 {
         /// 原始值。
         值: String,
     },
+    /// 数据库连接或迁移失败。
+    #[error(transparent)]
+    数据库(#[from] storage::错误),
     /// 监听端口失败。
     #[error("监听 {地址} 失败：{来源}")]
     监听失败 {
@@ -48,8 +56,19 @@ enum 启动错误 {
 async fn main() -> Result<(), 启动错误> {
     初始化日志();
 
-    let 状态 = 读取状态()?;
+    let 令牌 = 读取配置("WS_TOKEN")?;
+    let 数据库_url = 读取配置("DATABASE_URL")?;
     let 地址 = 读取地址()?;
+
+    // 迁移在绑定端口之前跑：库连不上就不该对外提供服务。
+    let 池 = storage::建立连接池(&数据库_url).await?;
+    storage::迁移(&池).await?;
+    tracing::info!("数据库已连接，迁移已执行");
+
+    let 状态 = 状态 {
+        令牌: Arc::from(令牌),
+        池,
+    };
 
     let 监听器 = TcpListener::bind(地址)
         .await
@@ -79,13 +98,9 @@ fn 初始化日志() {
         .init();
 }
 
-/// 读取运行时状态。
-fn 读取状态() -> Result<状态, 启动错误> {
-    let 令牌 = std::env::var("WS_TOKEN").map_err(|_| 启动错误::缺少配置("WS_TOKEN"))?;
-
-    Ok(状态 {
-        令牌: Arc::from(令牌),
-    })
+/// 读取必需的环境变量。
+fn 读取配置(键: &'static str) -> Result<String, 启动错误> {
+    std::env::var(键).map_err(|_| 启动错误::缺少配置(键))
 }
 
 /// 读取监听地址，缺省 `0.0.0.0:8080`。
