@@ -6,7 +6,9 @@
 --   3. 生产次数和今日招募数量由全服定时任务推进（D32），所以**不存"上次结算时间"**：
 --      每小时 +1、每天清零，进度记在 系统状态 那张单行表里，漏跑可补算；
 --   4. uid 是秘密凭证：不知道 P uid 就找不到这个人，和地区的 R uid 同一套规则（D30）；
---   5. 联军职务与 联军_id 同生共死（有联军才有职务），元首/总理的唯一性交给部分唯一索引（D35）。
+--   5. 联军的职务与权限等级都有，但两者不是一回事：职务是位置（元首/总理在**三级之上**），
+--      权限等级是 1–3 的放行档位；元首/总理不要等级，干部/成员必须有等级。
+--      三个字段同生共死，怎么写由 CHECK 说清楚（D37）。
 
 CREATE TABLE 玩家 (
     id BIGSERIAL PRIMARY KEY,
@@ -40,14 +42,16 @@ CREATE TABLE 玩家 (
     驻扎地区_id BIGINT,
     联军_id BIGINT,
     联军职务 TEXT,
+    联军权限等级 权限等级,
     联军贡献 非负计数,
     加入联军时间 可空时间戳,
     出生保护至 可空时间戳,
     创建时间 时间戳,
 
-    CONSTRAINT 联军职务与联军一致 CHECK (
-        (联军_id IS NULL AND 联军职务 IS NULL)
-        OR (联军_id IS NOT NULL AND 联军职务 IS NOT NULL)
+    CONSTRAINT 联军职务与等级一致 CHECK (
+        (联军_id IS NULL AND 联军职务 IS NULL AND 联军权限等级 IS NULL)
+        OR (联军_id IS NOT NULL AND 联军职务 IN ('leader', 'premier') AND 联军权限等级 IS NULL)
+        OR (联军_id IS NOT NULL AND 联军职务 IN ('officer', 'member') AND 联军权限等级 IS NOT NULL)
     )
 );
 
@@ -76,6 +80,7 @@ COMMENT ON COLUMN 玩家.上次驻扎时间 IS '驻扎冷却的锚点：防止�
 COMMENT ON COLUMN 玩家.驻扎地区_id IS '逻辑引用 地区.id；NULL = 没驻扎。地区易主不影响它（弱引用）';
 COMMENT ON COLUMN 玩家.联军_id IS '逻辑引用 联军.id；NULL = 还没有联军';
 COMMENT ON COLUMN 玩家.联军职务 IS 'leader 元首 / premier 总理 / officer 干部 / member 成员；NULL = 没有联军，与 联军_id 同生共死（CHECK 保证）';
+COMMENT ON COLUMN 玩家.联军权限等级 IS '1–3 级权限：能执行哪些动作由 (政体, 动作) 的阈值决定；元首/总理在等级之上，所以为 NULL（D37）';
 COMMENT ON COLUMN 玩家.联军贡献 IS '对当前联军的贡献；入盟时清零，退盟后无意义';
 COMMENT ON COLUMN 玩家.加入联军时间 IS 'NULL = 没入盟';
 COMMENT ON COLUMN 玩家.出生保护至 IS 'Unix 秒；NULL = 已出保护期';
