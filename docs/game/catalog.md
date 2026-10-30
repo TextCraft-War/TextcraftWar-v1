@@ -1,8 +1,7 @@
 # 键表：落库的稳定编码
 
-> 状态：草案（物品清单 = 原版指南 2.1.11 + v2 `Player` 的资源字段）｜ 最后更新：2026-10-30
 >
-> 相关：[data-model.md](./data-model.md)、[decisions.md D25 / D27 / D36](./decisions.md)
+> 相关：[data-model.md](../arch/data-model.md)、[decisions.md D25 / D27 / D36](../../decisions.md)
 
 ## 一、这一页解决什么
 

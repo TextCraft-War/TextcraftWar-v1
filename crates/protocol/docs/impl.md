@@ -1,8 +1,7 @@
 # protocol — wire DTO
 
-> 状态：草案（尚无实现）｜ 最后更新：2026-10-29
 >
-> 契约正文见 [docs/protocol.md](../../../docs/protocol.md)。本文只写**实现约定**。
+> 契约正文见 [docs/protocol.md](../../../docs/arch/protocol.md)。本文只写**实现约定**。
 
 ## 一、这个 crate 是什么
 
@@ -70,4 +69,4 @@ fn command_序列化形状固定() {
 
 - [ ] 消息类型定义
 - [ ] 往返测试
-- [ ] `segments` 的 `image` 变体（字段待定，见 docs/protocol.md 第七节）
+- [ ] `segments` 的 `image` 变体（字段待定，见 docs/arch/protocol.md 第七节）

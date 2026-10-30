@@ -1,6 +1,6 @@
 //! 共享消息类型与 `serde` 序列化：面向 Koishi 插件的 JSON 契约。
 //!
-//! 契约正文见 `docs/protocol.md`。本 crate **不依赖 `domain`**：
+//! 契约正文见 `docs/arch/protocol.md`。本 crate **不依赖 `domain`**：
 //! 内部模型与对外契约各自演化，避免改一个内部字段名就迫使插件侧升级。
 
 use serde::{Deserialize, Serialize};
@@ -96,7 +96,7 @@ pub enum 下行消息 {
         /// 群 / 频道 id；握手阶段出错时为 `None`。
         #[serde(rename = "channelId", default, skip_serializing_if = "Option::is_none")]
         频道_id: Option<String>,
-        /// 错误码，取值见 `docs/protocol.md`。
+        /// 错误码，取值见 `docs/arch/protocol.md`。
         #[serde(rename = "code")]
         错误码: String,
         /// 给玩家看的中文说明，不含调试信息。

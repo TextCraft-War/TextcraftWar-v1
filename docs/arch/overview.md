@@ -1,8 +1,7 @@
 # 工程架构
 
-> 状态：草案 ｜ 最后更新：2026-10-29
 >
-> 游戏规则见 [design.md](./design.md)；wire 格式见 [protocol.md](./protocol.md)。
+> 游戏规则见 [design.md](../game/design.md)；wire 格式见 [protocol.md](./protocol.md)。
 
 ## 一、总览
 
@@ -32,7 +31,7 @@
 | `storage` | SQL 与"行 ↔ domain 类型"的翻译 | sqlx、domain | protocol、server |
 | `server` | WS、文本解析、编排、文案 | 全部 | — |
 
-细节见各自的 `crates/*/docs/design.md`。
+细节见各自的 `crates/*/docs/impl.md`。
 
 ## 三、三条硬边界
 
@@ -85,17 +84,17 @@ DDD 的**语言**（统一语言、限界上下文）有用，DDD 的**机器**�
 ```
 crates/
 ├── domain/
-│   ├── docs/design.md     本 crate 实现约定
+│   ├── docs/impl.md     本 crate 实现约定
 │   └── src/lib.rs         规则（按业务拆模块）
 ├── protocol/
-│   ├── docs/design.md
+│   ├── docs/impl.md
 │   └── src/lib.rs         消息类型
 ├── storage/
-│   ├── docs/design.md     表结构、事务、映射
+│   ├── docs/impl.md     表结构、事务、映射
 │   ├── migrations/        sqlx 迁移（编译期内嵌）
 │   └── src/lib.rs
 └── server/
-    ├── docs/design.md     WS 生命周期、分发、文案
+    ├── docs/impl.md     WS 生命周期、分发、文案
     └── src/
         ├── main.rs        入口
         ├── 文案.rs        玩家可见文本的唯一出口
@@ -104,4 +103,4 @@ crates/
 
 ## 七、硬规范在哪里
 
-工程硬规范（lint、命名、依赖审查）在仓库根 [AGENTS.md](../AGENTS.md)。本文档只解释**为什么**，不复述规则；两者冲突时以 AGENTS.md 为准。
+工程硬规范（lint、命名、依赖审查）在仓库根 [AGENTS.md](../../AGENTS.md)。本文档只解释**为什么**，不复述规则；两者冲突时以 AGENTS.md 为准。

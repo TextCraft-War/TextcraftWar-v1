@@ -1,7 +1,7 @@
 //! 服务器统一的错误类型：错误码 + 给玩家看的一句话。
 //!
 //! 传输层（握手、帧）与业务层（未注册、频道没地区）**共用一个枚举**，
-//! 因为错误码表只能有一份：它是 `docs/protocol.md` 的镜像，
+//! 因为错误码表只能有一份：它是 `docs/arch/protocol.md` 的镜像，
 //! 散成两份就一定会漂移（[D43]）。
 //!
 //! [D43]: ../../../docs/decisions.md
@@ -112,7 +112,7 @@ pub enum 错误 {
 }
 
 impl 错误 {
-    /// 对外暴露的错误码，取值见 `docs/protocol.md`。
+    /// 对外暴露的错误码，取值见 `docs/arch/protocol.md`。
     pub const fn 错误码(&self) -> &'static str {
         match self {
             Self::未注册 => "not_registered",

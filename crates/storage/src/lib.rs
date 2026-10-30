@@ -8,9 +8,9 @@
 //! 它拿到的是 [`事务`] 这个不透明句柄 + [`开事务`]/[`提交`]/[`回滚`] 三个动作（[D40]）。
 //! 这样"只有 storage 懂数据库"是编译期的事实，不是纪律。
 //!
-//! 表结构见 [`docs/data-model.md`]，实现约定见 `crates/storage/docs/design.md`。
+//! 表结构见 [`docs/arch/data-model.md`]，实现约定见 `crates/storage/docs/impl.md`。
 //!
-//! [`docs/data-model.md`]: ../../../docs/data-model.md
+//! [`docs/arch/data-model.md`]: ../../../docs/arch/data-model.md
 //! [D40]: ../../../docs/decisions.md
 
 #[path = "player.rs"]

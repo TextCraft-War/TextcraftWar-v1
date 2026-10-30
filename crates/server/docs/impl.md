@@ -1,8 +1,7 @@
 # server — WebSocket 服务器
 
-> 状态：S2「注册」已跑通 ｜ 最后更新：2026-10-30
 >
-> 契约见 [docs/protocol.md](../../../docs/protocol.md)；分层见 [architecture.md](../../../docs/architecture.md)。
+> 契约见 [docs/protocol.md](../../../docs/arch/protocol.md)；分层见 [architecture.md](../../../docs/arch/overview.md)。
 
 ## 一、这个 crate 是什么
 
@@ -49,14 +48,8 @@
 不要出现"端口开着但所有指令都报错"的半死状态。
 （`domain` 的数值常量编译进代码，没有运行时"定义表"要加载——见 decisions.md D16/D17。）
 
-配置项（v1，全部走环境变量）：
-
-| 变量 | 说明 |
-|---|---|
-| `DATABASE_URL` | PostgreSQL 连接串 |
-| `BIND_ADDR` | 监听地址，默认 `0.0.0.0:8080` |
-| `WS_TOKEN` | 握手共享密钥 |
-| `RUST_LOG` | `tracing` 过滤 |
+环境变量、PG 准备与种子数据是**操作域**，唯一出处：
+[guides/deployment.md](../../../docs/guides/deployment.md)，这里不重复抄表。
 
 ## 三、连接处理
 
@@ -244,7 +237,7 @@ pub fn 签到结果(获得: i64, 稳定度: i64) -> String
 
 **一个 `错误` 枚举 + 三张表**（D43）：传输层（握手、帧、JSON）与业务层
 （未注册、频道无地区、不认识的指令）**共用一个枚举**——错误码表只能有一份，
-它是 `docs/protocol.md` 错误码表的镜像，散成两份必漂移。
+它是 `docs/arch/protocol.md` 错误码表的镜像，散成两份必漂移。
 
 | 表 | 回答 | 用在哪 |
 |---|---|---|

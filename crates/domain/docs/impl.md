@@ -1,9 +1,8 @@
 # domain — 纯规则层
 
-> 状态：枚举与编号已实现，规则函数待写 ｜ 最后更新：2026-10-30
 >
-> **类型定义不在这里**，见 [docs/data-model.md 第四节](../../../docs/data-model.md)。
-> 全局规则见 [design.md](../../../docs/design.md)；分层理由见 [architecture.md](../../../docs/architecture.md)。
+> **类型定义不在这里**，见 [docs/data-model.md 第四节](../../../docs/arch/data-model.md)。
+> 全局规则见 [design.md](../../../docs/game/design.md)；分层理由见 [architecture.md](../../../docs/arch/overview.md)。
 
 ## 一、这个 crate 是什么
 

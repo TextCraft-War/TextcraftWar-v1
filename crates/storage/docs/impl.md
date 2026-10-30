@@ -1,8 +1,7 @@
 # storage — 持久化层
 
-> 状态：S2 的玩家 / 频道函数已实现 ｜ 最后更新：2026-10-30
 >
-> **表结构与领域类型不在这里定义**，见 [docs/data-model.md](../../../docs/data-model.md)。
+> **表结构与领域类型不在这里定义**，见 [docs/data-model.md](../../../docs/arch/data-model.md)。
 > 本文只写"怎么落地"。
 
 ## 一、这个 crate 是什么
