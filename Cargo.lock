@@ -1254,7 +1254,6 @@ dependencies = [
  "protocol",
  "rand 0.9.5",
  "serde_json",
- "sqlx",
  "storage",
  "thiserror",
  "tokio",

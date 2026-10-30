@@ -48,11 +48,6 @@ use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _
 pub use 分发::{处理, 来信};
 pub use 错误类型::错误;
 
-// 集成测试用 `sqlx` 直接播种"地区 + 频道绑定"；本 crate 的单元测试不碰数据库，
-// 所以声明一下这个 dev-dependency 的存在，免得 `unused_crate_dependencies` 误报。
-#[cfg(test)]
-use sqlx as _;
-
 /// 全局共享状态。每条连接持有它的克隆。
 ///
 /// 这里**只放进程级依赖**（密钥、连接池）。玩家状态一律现查现用，

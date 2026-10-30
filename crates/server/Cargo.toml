@@ -20,9 +20,10 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 [dev-dependencies]
-# 集成测试要自己播种"地区 + 频道绑定"，而本 crate 的正式依赖里没有 sqlx
-# （那是刻意的：只有 storage 懂数据库）。测试里破这一条，换取能端到端跑注册。
-sqlx.workspace = true
+# 集成测试的播种与断言走 `storage::测试辅助`（feature `testing`，D47）。
+# 本 crate 的正式依赖里没有 sqlx，测试依赖里**也不许再有**：
+# "只有 storage 懂数据库"对测试同样成立，表结构变化只改 storage 一处。
+storage = { workspace = true, features = ["testing"] }
 
 [lints]
 workspace = true

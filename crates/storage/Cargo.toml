@@ -12,5 +12,10 @@ domain.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 
+[features]
+# 集成测试播种（`crates/storage/src/testing.rs`）。生产构建不编译；
+# `server` 的 dev-dependencies 以 `features = ["testing"]` 启用（D47）。
+testing = []
+
 [lints]
 workspace = true
