@@ -5,7 +5,8 @@
 --   2. 日期一律 Unix 秒，不用字符串（v2 有 `上次驻扎日期: string`，那是坑）；
 --   3. 生产次数和今日招募数量由全服定时任务推进（D32），所以**不存"上次结算时间"**：
 --      每小时 +1、每天清零，进度记在 系统状态 那张单行表里，漏跑可补算；
---   4. uid 是秘密凭证：不知道 P uid 就找不到这个人，和地区的 R uid 同一套规则（D30）。
+--   4. uid 是秘密凭证：不知道 P uid 就找不到这个人，和地区的 R uid 同一套规则（D30）；
+--   5. 联军职务与 联军_id 同生共死（有联军才有职务），元首/总理的唯一性交给部分唯一索引（D35）。
 
 CREATE TABLE 玩家 (
     id BIGSERIAL PRIMARY KEY,
@@ -38,15 +39,22 @@ CREATE TABLE 玩家 (
     -- 位置与组织
     驻扎地区_id BIGINT,
     联军_id BIGINT,
-    联军职务 TEXT NOT NULL DEFAULT 'member',
+    联军职务 TEXT,
     联军贡献 非负计数,
     加入联军时间 可空时间戳,
     出生保护至 可空时间戳,
-    创建时间 时间戳
+    创建时间 时间戳,
+
+    CONSTRAINT 联军职务与联军一致 CHECK (
+        (联军_id IS NULL AND 联军职务 IS NULL)
+        OR (联军_id IS NOT NULL AND 联军职务 IS NOT NULL)
+    )
 );
 
 CREATE INDEX 玩家_联军_id ON 玩家 (联军_id);
 CREATE INDEX 玩家_驻扎地区_id ON 玩家 (驻扎地区_id);
+CREATE UNIQUE INDEX 玩家_联军元首唯一 ON 玩家 (联军_id) WHERE 联军职务 = 'leader';
+CREATE UNIQUE INDEX 玩家_联军总理唯一 ON 玩家 (联军_id) WHERE 联军职务 = 'premier';
 
 COMMENT ON TABLE 玩家 IS '指挥官（跨平台身份）。工人 + 私军 + 地下工人 + 休假工人 = 总人口，扩军是 1:1 的转化';
 COMMENT ON COLUMN 玩家.uid IS '秘密凭证（显示为 P123456，落库只存 6 位数字）：知道它才能跨群找到这个人';
@@ -67,7 +75,7 @@ COMMENT ON COLUMN 玩家.上次炮击时间 IS '炮击冷却；具体间隔待�
 COMMENT ON COLUMN 玩家.上次驻扎时间 IS '驻扎冷却的锚点：防止刚撤走就立刻驻扎到别处';
 COMMENT ON COLUMN 玩家.驻扎地区_id IS '逻辑引用 地区.id；NULL = 没驻扎。地区易主不影响它（弱引用）';
 COMMENT ON COLUMN 玩家.联军_id IS '逻辑引用 联军.id；NULL = 还没有联军';
-COMMENT ON COLUMN 玩家.联军职务 IS 'member / officer / leader；没有联军时无意义';
+COMMENT ON COLUMN 玩家.联军职务 IS 'leader 元首 / premier 总理 / officer 干部 / member 成员；NULL = 没有联军，与 联军_id 同生共死（CHECK 保证）';
 COMMENT ON COLUMN 玩家.联军贡献 IS '对当前联军的贡献；入盟时清零，退盟后无意义';
 COMMENT ON COLUMN 玩家.加入联军时间 IS 'NULL = 没入盟';
 COMMENT ON COLUMN 玩家.出生保护至 IS 'Unix 秒；NULL = 已出保护期';
