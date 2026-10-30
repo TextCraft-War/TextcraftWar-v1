@@ -11,9 +11,10 @@
 1. [design.md](./design.md) — 这是个什么游戏，规则是什么
 2. [architecture.md](./architecture.md) — 代码为什么这样分层
 3. [data-model.md](./data-model.md) — 表结构与领域类型（唯一事实来源）
-4. [protocol.md](./protocol.md) — 服务器和 Koishi 怎么说话
-5. [roadmap.md](./roadmap.md) — 现在做到哪了，下一步做什么
-6. [decisions.md](./decisions.md) — 每个重要决定背后的理由
+4. [catalog.md](./catalog.md) — 落库的稳定编码（物品 / 建筑 / 平台 / 枚举值）
+5. [protocol.md](./protocol.md) — 服务器和 Koishi 怎么说话
+6. [roadmap.md](./roadmap.md) — 现在做到哪了，下一步做什么
+7. [decisions.md](./decisions.md) — 每个重要决定背后的理由
 
 各 crate 的 `docs/design.md` 是实现约定，**读代码前看**。
 
@@ -27,6 +28,7 @@
 |---|---|---|
 | `design.md` | 玩法、规则、数值、指令 | 表结构、代码结构 |
 | `data-model.md` | 表结构、领域类型、不变量 | 玩法规则、SQL 查询 |
+| `catalog.md` | 落库的稳定编码与中文对照 | 规则、数值、表结构 |
 | `architecture.md` | crate 分层、依赖方向、数据流 | 玩法规则 |
 | `protocol.md` | wire 格式、字段、错误码 | 内部类型、玩法 |
 | `roadmap.md` | 切片、验收标准、状态 | 设计细节 |

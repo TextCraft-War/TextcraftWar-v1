@@ -45,6 +45,9 @@ pub enum 上行消息 {
         /// 平台昵称快照，可缺省。
         #[serde(rename = "nickname", default, skip_serializing_if = "Option::is_none")]
         昵称: Option<String>,
+        /// 消息里被 @ 到的账号，按出现顺序。Rust 侧不解析平台私有的 @ 语法。
+        #[serde(rename = "mentions", default, skip_serializing_if = "Vec::is_empty")]
+        提及: Vec<提及>,
         /// 玩家原话。命令解析在 Rust 侧完成。
         #[serde(rename = "text")]
         文本: String,
@@ -105,6 +108,22 @@ pub enum 下行消息 {
     心跳回应,
 }
 
+/// 一条 @ 提及。
+///
+/// 由 Koishi 解析：它已经把各平台私有的 @ 语法统一成"平台 + 用户 id"，
+/// 服务端不需要认识 `<at id="…"/>` 或 `<@123>` 这类格式。
+///
+/// 玩家在游戏里**没有名字**——寻址靠平台账号，所以这个结构就是"指向某个玩家"的唯一方式。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct 提及 {
+    /// 平台标识；与所属 `command` 的 `platform` 相同。
+    #[serde(rename = "platform")]
+    pub 平台: String,
+    /// 被 @ 的平台用户 id。
+    #[serde(rename = "userId")]
+    pub 用户_uid: String,
+}
+
 /// 一条消息里的片段。
 ///
 /// 用片段而不是纯字符串，是为了将来能发图片而不改动协议形状。
@@ -139,6 +158,7 @@ mod 测试 {
             频道_id: "523909412".to_owned(),
             用户_uid: "3071303571".to_owned(),
             昵称: None,
+            提及: Vec::new(),
             文本: "签到".to_owned(),
         };
 
@@ -153,9 +173,42 @@ mod 测试 {
             json.contains(r#""userId":"3071303571""#),
             "实际输出：{json}"
         );
+        // 空提及不该出现在 wire 上
+        assert!(!json.contains(r#""mentions""#), "实际输出：{json}");
         // 中文标识符绝不能漏进 wire 格式
         assert!(!json.contains("频道_id"), "实际输出：{json}");
         assert!(!json.contains("昵称"), "实际输出：{json}");
+    }
+
+    #[test]
+    fn 提及被解析成平台加用户_id() {
+        let 样例 = r#"{
+            "type":"command",
+            "id":"c-2",
+            "platform":"discord",
+            "channelId":"900",
+            "userId":"1",
+            "mentions":[{"platform":"discord","userId":"42"}],
+            "text":"炮击 @某人"
+        }"#;
+
+        let 消息: 上行消息 = serde_json::from_str(样例).unwrap();
+
+        let 上行消息::指令 {
+            提及: 被提及, 文本,
+        ..
+        } = 消息
+        else {
+            panic!("应当是 command");
+        };
+        assert_eq!(文本, "炮击 @某人");
+        assert_eq!(
+            被提及,
+            vec![提及 {
+                平台: "discord".to_owned(),
+                用户_uid: "42".to_owned(),
+            }]
+        );
     }
 
     #[test]
