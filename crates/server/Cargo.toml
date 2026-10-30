@@ -9,13 +9,20 @@ repository.workspace = true
 
 [dependencies]
 axum.workspace = true
+domain.workspace = true
 protocol.workspace = true
+rand.workspace = true
 serde_json.workspace = true
 storage.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+[dev-dependencies]
+# 集成测试要自己播种"地区 + 频道绑定"，而本 crate 的正式依赖里没有 sqlx
+# （那是刻意的：只有 storage 懂数据库）。测试里破这一条，换取能端到端跑注册。
+sqlx.workspace = true
 
 [lints]
 workspace = true

@@ -1,29 +1,17 @@
-//! `Textcraft: War` 服务器入口：建立 WebSocket 端点，交给 [`连接`] 处理。
+//! `Textcraft: War` 服务器入口：读配置、建池、跑迁移、监听。
 //!
-//! 配置全部走环境变量，见 `crates/server/docs/design.md`。
+//! 真正的逻辑在库侧；本文件只负责"把进程正确地点起来"，
+//! 以及"点不起来时说清楚为什么"。
 
-// rustc 拒绝非 ASCII 模块**文件名**（error[E0754]），
-// 所以文件用英文，模块名保持中文，靠 `#[path]` 转一层。
-#[path = "connection.rs"]
-mod 连接;
+// 依赖是按**包**声明的，而 `unused_crate_dependencies` 是按**target** 检查的：
+// `domain` / `protocol` / `rand` / `serde_json` 都由库侧使用，这个 100 行的入口用不到，
+// 但把它们从包的依赖里删掉，库就编译不过。
+#![allow(unused_crate_dependencies, reason = "依赖由库侧使用，入口只是启动代码")]
 
 use std::{net::SocketAddr, sync::Arc};
 
-use axum::{Router, routing::get};
+use server::{初始化日志, 状态, 路由};
 use tokio::net::TcpListener;
-use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
-
-/// 全局共享状态。每条连接持有它的克隆。
-#[derive(Clone)]
-pub(crate) struct 状态 {
-    /// 握手用的共享密钥。
-    pub(crate) 令牌: Arc<str>,
-    /// 数据库连接池。事务边界由 `server` 掌握，所以池放在这里。
-    ///
-    /// S2 起 `command` 要用它查频道与玩家，届时这条 `expect` 会失效并提醒删掉。
-    #[expect(dead_code, reason = "S2 的 command 路由才会读它")]
-    pub(crate) 池: storage::连接池,
-}
 
 /// 启动期错误。
 #[derive(Debug, thiserror::Error)]
@@ -87,17 +75,6 @@ async fn main() -> Result<(), 启动错误> {
         })
 }
 
-/// 初始化 `tracing`；`RUST_LOG` 缺省时用 `info`。
-fn 初始化日志() {
-    let 过滤器 = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
-
-    tracing_subscriber::registry()
-        .with(过滤器)
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-}
-
 /// 读取必需的环境变量。
 fn 读取配置(键: &'static str) -> Result<String, 启动错误> {
     std::env::var(键).map_err(|_| 启动错误::缺少配置(键))
@@ -115,11 +92,4 @@ fn 读取地址() -> Result<SocketAddr, 启动错误> {
         })?;
 
     Ok(地址)
-}
-
-/// 组装路由。目前只有 `/ws` 一个端点。
-fn 路由(状态: 状态) -> Router {
-    Router::new()
-        .route("/ws", get(连接::ws_处理器))
-        .with_state(状态)
 }

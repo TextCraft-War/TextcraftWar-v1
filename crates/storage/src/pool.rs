@@ -23,6 +23,41 @@ pub async fn 建立连接池(url: &str) -> Result<连接池, 错误> {
         .map_err(|来源| 错误::连接失败 { 来源 })
 }
 
+/// 一条指令的事务。
+///
+/// 对 `server` 来说是**不透明句柄**：它只能把 `&mut 事务` 交给本 crate 的函数，
+/// 不能自己发 SQL，也看不到 `sqlx` 的类型（[D40]）。
+///
+/// [D40]: ../../../docs/decisions.md
+pub type 事务 = sqlx::Transaction<'static, sqlx::Postgres>;
+
+/// 开一个事务。每条指令恰好一个：成功提交，失败回滚。
+pub async fn 开事务(池: &连接池) -> Result<事务, 错误> {
+    池.begin().await.map_err(|来源| 错误::数据库失败 {
+        操作: "开启事务",
+        来源,
+    })
+}
+
+/// 提交事务。
+pub async fn 提交(事务: 事务) -> Result<(), 错误> {
+    事务.commit().await.map_err(|来源| 错误::数据库失败 {
+        操作: "提交事务",
+        来源,
+    })
+}
+
+/// 回滚事务。
+///
+/// 丢弃一个 [`事务`] 也会回滚（`sqlx` 在 `Drop` 里排队执行）；
+/// 这里显式回滚是为了能让"回滚也失败了"出现在日志里。
+pub async fn 回滚(事务: 事务) -> Result<(), 错误> {
+    事务.rollback().await.map_err(|来源| 错误::数据库失败 {
+        操作: "回滚事务",
+        来源,
+    })
+}
+
 /// 执行编译期内嵌的迁移。
 ///
 /// 迁移文件在 `crates/storage/migrations/`，由 `sqlx::migrate!` 在编译期读入，

@@ -44,6 +44,10 @@ thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# 随机：6 位编号、跨平台绑定口令。只在 `server` 里用——
+# `domain` 把随机源当参数（规则必须可复现），`storage` 不该知道编号从哪来。
+rand = "0.9"
+
 # i18n：v1 只有中文，先不引入。等多语言是真实需求时再启用
 # （注意 fluent 的 FluentBundle 不是 Sync，届时需要单独的渲染线程方案）。
 # fluent = "0.17"
