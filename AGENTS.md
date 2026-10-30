@@ -64,6 +64,9 @@ domain -> 无
   `NOT NULL DEFAULT 0 CHECK (... >= 0)`;语义用 `COMMENT ON` 写进数据库目录。
 - 枚举列一律存 `TEXT`,不要用 PG 的 `enum` 类型:`storage` 里用 `String` 读出,
   再 `TryFrom` 成 domain 的枚举——这样加枚举变体不需要 `ALTER TYPE`,也不会把 DB 类型绑进 Rust 类型。
+- 迁移文件名 `<两位版本号>_<英文短语>.sql`(`01_domains.sql`、`11_player.sql`):**只有文件名用英文**,
+  SQL 内容仍是中文。版本号必须 ≥ 1(sqlx 契约)且按 10 分段预留空位,见
+  [decisions.md D22](./docs/decisions.md)。
 - 战争结算等高并发写路径:
   - 优先批量更新,避免循环逐行写。
   - 事务粒度最小化,禁用大事务锁全表。

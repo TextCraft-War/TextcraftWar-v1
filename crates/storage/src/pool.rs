@@ -44,6 +44,22 @@ mod tests {
         assert!(!迁移集.migrations.is_empty(), "迁移目录没被内嵌");
         assert!(迁移集.migrations.iter().all(|迁移| !迁移.sql.is_empty()));
 
+        // sqlx 的契约：版本号来自文件名前缀，必须是大于零的整数，按升序执行。
+        // `00_` 开头的文件在 0.8.6 里能跑，但违反契约，将来可能被当成非法文件名静默忽略；
+        // 让它在 `cargo test` 里炸掉，比在线上"少建一张表"好。
+        let 版本号: Vec<i64> = 迁移集.migrations.iter().map(|迁移| 迁移.version).collect();
+        assert!(
+            版本号.iter().all(|版本| *版本 >= 1),
+            "迁移版本号必须 ≥ 1：{版本号:?}"
+        );
+        assert!(
+            版本号
+                .iter()
+                .zip(版本号.iter().skip(1))
+                .all(|(前者, 后者)| 前者 < 后者),
+            "迁移版本号必须严格递增：{版本号:?}"
+        );
+
         let 首版 = 迁移集.migrations.first().expect("迁移集不该为空");
         assert_eq!(首版.version, 1, "第一份迁移必须是基础类型");
     }
