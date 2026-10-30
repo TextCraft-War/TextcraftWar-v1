@@ -1,10 +1,11 @@
-//! 单条 WebSocket 连接的生命周期：握手 -> 主循环。
+//! WebSocket 传输层：升级、帧循环、回执发送。
 //!
-//! 连接上**不保存游戏状态**：每条上行消息自带平台、频道、用户标识，
-//! 因此任何一条连接都能处理任何一条消息。连接只记一样东西——**握手时的平台**，
-//! 用来拒绝"这条连接冒充另一个平台"的消息（`docs/arch/protocol.md`：一条连接 = 一个平台）。
+//! 与会话层（`session.rs`）的分工（D48）：这里只管**帧**——读、写、
+//! Ping/Pong、关闭；握手状态机与平台一致性门卫在会话层。
+//! 连接上不保存游戏状态：每条上行消息自带平台、频道、用户标识，
+//! 因此任何一条连接都能处理任何一条消息。
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use axum::{
     extract::{
@@ -14,27 +15,18 @@ use axum::{
     response::Response,
 };
 use domain::平台;
-use protocol::{上行消息, 下行消息, 协议主版本, 消息段};
+use protocol::{上行消息, 下行消息, 消息段};
 
-use crate::{分发, 状态, 错误};
-
-/// 客户端必须在这个时间内发来握手消息。
-const 握手超时: Duration = Duration::from_secs(5);
-
-/// 单条指令的长度上限（字符数，不是字节数）。
-///
-/// 协议承诺过的上限：防的是"有人往日志/数据库里灌数据"，
-/// 不是为了限制玩法。超长直接拒绝，不截断——截断会让玩家以为自己发对了。
-const 指令长度上限: usize = 512;
+use crate::{会话, 传输错误, 分发, 状态, 错误};
 
 /// 处理 WebSocket 升级请求。
 pub(crate) async fn ws_处理器(ws: WebSocketUpgrade, State(状态): State<状态>) -> Response {
     ws.on_upgrade(move |套接字| 处理连接(套接字, 状态))
 }
 
-/// 一条连接的完整生命周期。
+/// 一条连接的完整生命周期：握手（会话层）→ 主循环 → 关闭帧。
 async fn 处理连接(mut 套接字: WebSocket, 状态: 状态) {
-    match 握手(&mut 套接字, &状态).await {
+    match 会话::握手(&mut 套接字, &状态).await {
         Ok(平台) => {
             tracing::info!(%平台, "连接就绪");
             if let Err(失败) = 主循环(&mut 套接字, &状态, 平台).await {
@@ -55,52 +47,16 @@ async fn 处理连接(mut 套接字: WebSocket, 状态: 状态) {
     }
 }
 
-/// 读取并校验握手消息，成功时返回这条连接所属的平台。
-async fn 握手(套接字: &mut WebSocket, 状态: &状态) -> Result<平台, 错误> {
-    let 帧 = tokio::time::timeout(握手超时, 套接字.recv())
+/// 读一帧。对端关闭映射成 [`传输错误::连接已关闭`]，底层故障映射成
+/// [`传输错误::传输失败`]——握手与主循环共用这一种读法。
+pub(crate) async fn 收帧(套接字: &mut WebSocket) -> Result<Message, 错误> {
+    let 帧 = 套接字
+        .recv()
         .await
-        .map_err(|_| 错误::握手超时)?
-        .ok_or(错误::连接已关闭)?
-        .map_err(|_| 错误::传输失败)?;
+        .ok_or(传输错误::连接已关闭)?
+        .map_err(|_| 传输错误::传输失败)?;
 
-    let Message::Text(原文) = 帧 else {
-        return Err(错误::非文本帧);
-    };
-
-    let 消息 = serde_json::from_str::<上行消息>(&原文).map_err(|_| 错误::无法解析)?;
-
-    let 上行消息::握手 {
-        平台: 平台原文,
-        token,
-        协议版本: 客户端版本,
-    } = 消息
-    else {
-        return Err(错误::不是握手消息);
-    };
-
-    if token != 状态.令牌.as_ref() {
-        return Err(错误::令牌错误);
-    }
-
-    if 客户端版本 != 协议主版本 {
-        return Err(错误::版本不匹配 {
-            服务端: 协议主版本
-        });
-    }
-
-    let 平台 = 平台::解析(&平台原文).ok_or(错误::未知平台 {
-        原文: 平台原文
-    })?;
-
-    发送(
-        套接字,
-        &下行消息::就绪 {
-            协议版本: 协议主版本,
-        },
-    )
-    .await?;
-
-    Ok(平台)
+    Ok(帧)
 }
 
 /// 握手之后的消息循环。
@@ -111,7 +67,7 @@ async fn 主循环(
     套接字: &mut WebSocket, 状态: &状态, 连接平台: 平台
 ) -> Result<(), 错误> {
     while let Some(帧) = 套接字.recv().await {
-        let 帧 = 帧.map_err(|_| 错误::传输失败)?;
+        let 帧 = 帧.map_err(|_| 传输错误::传输失败)?;
 
         match 帧 {
             Message::Text(原文) => 处理文本(套接字, 状态, 连接平台, &原文).await?,
@@ -119,7 +75,7 @@ async fn 主循环(
                 套接字
                     .send(Message::Pong(载荷))
                     .await
-                    .map_err(|_| 错误::发送失败)?;
+                    .map_err(|_| 传输错误::发送失败)?;
             },
             Message::Close(_) => return Ok(()),
             Message::Binary(_) | Message::Pong(_) => {},
@@ -140,7 +96,7 @@ async fn 处理文本(
         Ok(消息) => 消息,
         Err(解析错误) => {
             tracing::debug!(%解析错误, "上行消息无法解析");
-            let 失败 = 错误::无法解析;
+            let 失败 = 错误::from(传输错误::无法解析);
             return 发送(套接字, &错误回执(&失败, None, None, None)).await;
         },
     };
@@ -148,7 +104,7 @@ async fn 处理文本(
     match 消息 {
         上行消息::心跳 => 发送(套接字, &下行消息::心跳回应).await,
         上行消息::握手 { .. } => {
-            let 失败 = 错误::重复握手;
+            let 失败 = 错误::from(传输错误::重复握手);
             let 回执 = 错误回执(&失败, None, None, None);
             发送(套接字, &回执).await
         },
@@ -202,9 +158,10 @@ async fn 处理文本(
     }
 }
 
-/// 校验消息里的平台，然后交给分发层。
+/// 过会话层的门卫，然后交给分发层。
 ///
-/// 平台校验放在分发之前：分发层只认识"已确认的平台"，不需要再防一次。
+/// 平台与长度的校验在分发之前（会话层）：分发层只认识"已确认的指令"，
+/// 不需要再防一次。
 async fn 处理一条指令(
     状态: &状态,
     连接平台: 平台,
@@ -213,32 +170,9 @@ async fn 处理一条指令(
     用户_uid: &str,
     文本: &str,
 ) -> Result<String, 错误> {
-    let 长度 = 文本.chars().count();
-    if 长度 > 指令长度上限 {
-        return Err(错误::文本过长 { 长度 });
-    }
+    let 来信 = 会话::校验指令(连接平台, 平台原文, 频道_id, 用户_uid, 文本)?;
 
-    let 平台 = 平台::解析(平台原文).ok_or_else(|| 错误::未知平台 {
-        原文: 平台原文.to_owned(),
-    })?;
-
-    if 平台 != 连接平台 {
-        return Err(错误::平台不一致 {
-            连接: 连接平台.编码().to_owned(),
-            消息: 平台原文.to_owned(),
-        });
-    }
-
-    分发::处理(
-        状态,
-        &分发::来信 {
-            平台,
-            频道_id: 频道_id.to_owned(),
-            用户_uid: 用户_uid.to_owned(),
-            文本: 文本.to_owned(),
-        },
-    )
-    .await
+    分发::处理(状态, &来信).await
 }
 
 /// 把内部错误翻译成一条对外的 `error` 消息。
@@ -259,12 +193,14 @@ fn 错误回执(
     }
 }
 
-/// 序列化并发送一条下行消息。
-async fn 发送(套接字: &mut WebSocket, 消息: &下行消息) -> Result<(), 错误> {
-    let 文本 = serde_json::to_string(消息).map_err(|_| 错误::无法解析)?;
+/// 序列化并发送一条下行消息。会话层回"就绪"也走这里。
+pub(crate) async fn 发送(套接字: &mut WebSocket, 消息: &下行消息) -> Result<(), 错误> {
+    let 文本 = serde_json::to_string(消息).map_err(|_| 传输错误::无法解析)?;
 
     套接字
         .send(Message::Text(文本.into()))
         .await
-        .map_err(|_| 错误::发送失败)
+        .map_err(|_| 传输错误::发送失败)?;
+
+    Ok(())
 }

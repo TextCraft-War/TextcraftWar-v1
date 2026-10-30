@@ -119,7 +119,7 @@ pub struct 联军Uid(
 
 /// 建筑编码，落库值（如 `school`，见 catalog 第三节）。
 ///
-/// 清单已定稿为 [`建筑`] 枚举前，先留 newtype 挡住裸 `String`；
+/// 清单定稿成 `建筑` 枚举前，先留 newtype 挡住裸 `String`；
 /// 换枚举时 DB 里的 `TEXT` 值不变。
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct 建筑编码(

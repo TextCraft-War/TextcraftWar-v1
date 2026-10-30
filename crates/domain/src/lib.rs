@@ -40,6 +40,7 @@ pub mod 编号;
 #[path = "error.rs"]
 mod 错误类型;
 
+pub use 命令::指令;
 pub use 错误类型::错误;
 // 平台从 `实体` 提到根上：`storage` / `server` 都按 `domain::平台` 用它。
 pub use 实体::平台;
