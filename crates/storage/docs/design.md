@@ -75,7 +75,7 @@ pub async fn 查库存(执行器: …, 所有者: 库存所有者) -> Result<库
 
 | 文件 | 内容 |
 |---|---|
-| `01_domains.sql` | DOMAIN：`非负计数` / `时间戳` / `百分比` / `地区uid` |
+| `01_domains.sql` | DOMAIN：`非负计数` / `时间戳` / `可空时间戳` / `百分比` / `地区uid` |
 | `10_coalition.sql` | `联军` |
 | `11_player.sql` | `玩家` + `玩家_联军_id` 索引 |
 | `20_region.sql` | `地区` + `地区_控制方_联军_id` 索引 |
