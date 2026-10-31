@@ -176,6 +176,45 @@ pub fn 显示玩家编号(编号: 玩家Uid) -> String {
     domain::编号::显示(玩家前缀, 编号.0)
 }
 
+/// 全服批处理：给所有玩家补上 `小时数` 个生产次数（`LEAST` 到上限为止，D32）。
+///
+/// 一条 UPDATE 覆盖全服（impl.md 第五节）；已到上限的行由 `WHERE` 跳过，
+/// 不做无谓重写。漏跑几小时就补几小时，进度锚点归 `系统状态`（单行表）。
+/// 返回实际推进的行数（日志用）。
+pub async fn 结算生产次数(句柄: &mut 事务, 小时数: i64) -> Result<u64, 错误> {
+    let 上限 = i64::from(domain::实体::玩家::生产次数上限);
+    let 结果 = sqlx::query(
+        "UPDATE 玩家
+            SET 生产次数 = LEAST(生产次数 + $1, $2)
+          WHERE 生产次数 < $2",
+    )
+    .bind(小时数)
+    .bind(上限)
+    .execute(句柄.连接())
+    .await
+    .map_err(|来源| 错误::数据库失败 {
+        操作: "结算生产次数",
+        来源,
+    })?;
+
+    Ok(结果.rows_affected())
+}
+
+/// 全服批处理：把所有人的今日招募数量清零（每天 0 点，D32）。
+///
+/// `WHERE 今日招募数量 > 0` 让已清零的库不用重写。返回实际清零的行数。
+pub async fn 清零今日招募(句柄: &mut 事务) -> Result<u64, 错误> {
+    let 结果 = sqlx::query("UPDATE 玩家 SET 今日招募数量 = 0 WHERE 今日招募数量 > 0")
+        .execute(句柄.连接())
+        .await
+        .map_err(|来源| 错误::数据库失败 {
+            操作: "清零今日招募",
+            来源,
+        })?;
+
+    Ok(结果.rows_affected())
+}
+
 #[cfg(test)]
 mod 测试 {
     use super::显示玩家编号;

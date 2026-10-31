@@ -62,7 +62,7 @@ use axum::{Router, routing::get};
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 pub use 分发::{处理, 来信};
-pub use 调度::启动调度器;
+pub use 调度::{启动调度器, 巡检};
 pub use 错误类型::{业务错误, 传输错误, 错误};
 
 /// 全局共享状态。每条连接持有它的克隆。

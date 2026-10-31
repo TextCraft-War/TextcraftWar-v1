@@ -1,21 +1,20 @@
 //! `注册` 的端到端流程：真数据库、真事务、真 SQL。
 //!
-//! 需要一个**测试专用**的库（测试会建地区、绑频道、删自己用的账号）：
+//! 连库与跳过策略见 [`tests::common`]；播种与断言走 `storage::测试辅助`：
+//! 本测试**不写一条 SQL**，表结构变化只改 `storage` 一处。
 //!
-//! ```text
-//! $env:DATABASE_URL="postgres://postgres@127.0.0.1:55400/textcraft_test"
-//! cargo test -p server --test register -- --ignored
-//! ```
-//!
-//! 没设 `DATABASE_URL` 时整组测试跳过但**打印警告**；在 `CI=true` 的环境里
-//! 缺库直接失败——CI 上静默跳过等于假绿灯（D47）。
-//! 播种与断言走 `storage::测试辅助`：本测试**不写一条 SQL**，
-//! 表结构变化只改 `storage` 一处。
+//! [`tests::common`]: ./common/mod.rs
 
 // 本测试是一个独立的 crate，会看到包的全部依赖；用不到的（`axum`、`rand`…）
 // 不该因此被当成"多余依赖"删掉——它们是库侧要的。
 #![allow(unused_crate_dependencies, reason = "测试只用到库的一小部分依赖")]
+// `common` 是私有模块，里面的 `pub(crate)` 函数会被 redundant_pub_crate 盯上；
+// 改 `pub` 又被 unreachable_pub 盯上——两边互斥（lib.rs 同款注释），照 lib.rs 放行。
+#![allow(clippy::redundant_pub_crate)]
 
+mod common;
+
+use common::连库;
 use domain::实体::{地区Id, 物品, 资源};
 use domain::平台;
 use server::{业务错误, 处理, 来信, 状态, 错误};
@@ -51,32 +50,6 @@ fn 提取玩家编号(文案: &str) -> Option<String> {
         .collect();
 
     (!数字.is_empty()).then_some(format!("P{数字}"))
-}
-
-/// 连库 + 迁移。`DATABASE_URL` 没设时返回 `Ok(None)`（跳过测试但打印警告）；
-/// 在 `CI=true` 的环境里返回 `Err`，让用例**失败**而不是假绿（D47）。
-#[allow(
-    clippy::print_stderr,
-    reason = "跳过必须肉眼可见；测试进程里没有初始化 tracing"
-)]
-async fn 连库() -> Result<Option<状态>, String> {
-    let Ok(url) = std::env::var("DATABASE_URL") else {
-        if std::env::var_os("CI").is_some_and(|值| 值 == "true") {
-            return Err("CI 环境必须提供测试库（DATABASE_URL）：静默跳过等于假绿灯".to_owned());
-        }
-        eprintln!("⚠️ DATABASE_URL 未设置：集成测试被跳过，没有对真库做任何验证");
-        return Ok(None);
-    };
-
-    let 池 = storage::建立连接池(&url)
-        .await
-        .map_err(|失败| 失败.to_string())?;
-    storage::迁移(&池).await.map_err(|失败| 失败.to_string())?;
-
-    Ok(Some(状态 {
-        令牌: "测试".into(),
-        池,
-    }))
 }
 
 /// 播种"地区 + 频道绑定"并清掉指定账号的旧数据，返回地区 id；可重复跑。

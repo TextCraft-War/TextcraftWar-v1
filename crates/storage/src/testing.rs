@@ -8,7 +8,7 @@
 //! 只提供测试需要的最小面：播种、清理、断言用的只读查询。
 //! 这些函数**不是**公开 API，签名随测试需求随时调整。
 
-use domain::实体::{地区Id, 物品, 玩家Id};
+use domain::实体::{地区Id, 物品, 玩家Id, 联军Id};
 use domain::平台;
 
 use crate::库存所有者;
@@ -214,4 +214,131 @@ pub async fn 绑定条数(
             })?;
 
     Ok(条数)
+}
+
+/// 把全服结算进度拨到指定时刻（测试断言/构造漏跑场景用）。
+///
+/// 覆盖写单行表的两个锚点——`None` 模拟"从没结算过"。
+pub async fn 发系统状态(
+    池: &连接池,
+    上次生产结算: Option<i64>,
+    上次日结: Option<i64>,
+) -> Result<(), 错误> {
+    let mut 句柄 = 开事务(池).await?;
+    sqlx::query("UPDATE 系统状态 SET 上次生产结算 = $1, 上次日结 = $2 WHERE id = 1")
+        .bind(上次生产结算)
+        .bind(上次日结)
+        .execute(句柄.连接())
+        .await
+        .map_err(|来源| 错误::数据库失败 {
+            操作: "拨测试系统状态",
+            来源,
+        })?;
+
+    提交(句柄).await
+}
+
+/// 把玩家的生产次数与今日招募数量拨到指定值（构造"快满 / 已满"的断言场景用）。
+pub async fn 改玩家生产(
+    池: &连接池,
+    玩家_id: 玩家Id,
+    生产次数: i64,
+    今日招募数量: i64,
+) -> Result<(), 错误> {
+    let mut 句柄 = 开事务(池).await?;
+    sqlx::query("UPDATE 玩家 SET 生产次数 = $1, 今日招募数量 = $2 WHERE id = $3")
+        .bind(生产次数)
+        .bind(今日招募数量)
+        .bind(玩家_id.0)
+        .execute(句柄.连接())
+        .await
+        .map_err(|来源| 错误::数据库失败 {
+            操作: "拨测试玩家生产",
+            来源,
+        })?;
+
+    提交(句柄).await
+}
+
+/// 播种一支联军并拨好当日累计（幂等：按 `编号` upsert，历史行清空），返回联军 id。
+///
+/// 清历史行是让"日结写了几行"的断言可重复跑。
+pub async fn 播种联军(
+    池: &连接池,
+    编号: i32,
+    名称: &str,
+    当天资本增量: i64,
+    当天扩军累计: i64,
+) -> Result<联军Id, 错误> {
+    let mut 句柄 = 开事务(池).await?;
+    let 联军_id: i64 = sqlx::query_scalar(
+        "INSERT INTO 联军 (uid, 名称, 创建时间, 当天资本增量, 当天扩军累计)
+              VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (uid) DO UPDATE
+              SET 名称 = EXCLUDED.名称,
+                  当天资本增量 = EXCLUDED.当天资本增量,
+                  当天扩军累计 = EXCLUDED.当天扩军累计
+         RETURNING id",
+    )
+    .bind(编号)
+    .bind(名称)
+    .bind(现在())
+    .bind(当天资本增量)
+    .bind(当天扩军累计)
+    .fetch_one(句柄.连接())
+    .await
+    .map_err(|来源| 错误::数据库失败 {
+        操作: "播种测试联军",
+        来源,
+    })?;
+
+    sqlx::query("DELETE FROM 联军资本增量 WHERE 联军_id = $1")
+        .bind(联军_id)
+        .execute(句柄.连接())
+        .await
+        .map_err(|来源| 错误::数据库失败 {
+            操作: "清理测试联军历史",
+            来源,
+        })?;
+
+    提交(句柄).await?;
+
+    Ok(联军Id(联军_id))
+}
+
+/// 查联军的当日累计（断言日结清零用）：`(当天资本增量, 当天扩军累计)`。
+pub async fn 查联军当日(池: &连接池, 联军_id: 联军Id) -> Result<(i64, i64), 错误> {
+    let mut 源 = 执行者::池(池).解析().await?;
+    let 行: (i64, i64) =
+        sqlx::query_as("SELECT 当天资本增量, 当天扩军累计 FROM 联军 WHERE id = $1")
+            .bind(联军_id.0)
+            .fetch_one(源.连接())
+            .await
+            .map_err(|来源| 错误::数据库失败 {
+                操作: "查询测试联军当日累计",
+                来源,
+            })?;
+
+    Ok(行)
+}
+
+/// 查联军的历史日结行（断言"一天一行、重跑不重复"用），按 `日结时间` 升序。
+pub async fn 查联军资本增量行(
+    池: &连接池,
+    联军_id: 联军Id,
+) -> Result<Vec<(i64, i64)>, 错误> {
+    let mut 源 = 执行者::池(池).解析().await?;
+    let 行: Vec<(i64, i64)> = sqlx::query_as(
+        "SELECT 日结时间, 资本增量 FROM 联军资本增量
+          WHERE 联军_id = $1 ORDER BY 日结时间 ASC",
+    )
+    .bind(联军_id.0)
+    .fetch_all(源.连接())
+    .await
+    .map_err(|来源| 错误::数据库失败 {
+        操作: "查询测试联军资本增量",
+        来源,
+    })?;
+
+    Ok(行)
 }
