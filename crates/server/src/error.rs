@@ -38,6 +38,13 @@ pub enum 业务错误 {
         原文: String,
     },
 
+    /// 认识这条指令，但它不收参数而玩家带了尾巴（D49.1，回 `bad_request`）。
+    #[error("指令带了多余参数：{词头}")]
+    多余参数 {
+        /// 认出来的词头。
+        词头: String,
+    },
+
     /// 连续多次生成的六位编号都已被占用。
     #[error("连续 {次数} 次生成的编号都已被占用")]
     编号用尽 {
@@ -187,14 +194,17 @@ impl 业务错误 {
             Self::领域(领域错误) => match 领域错误 {
                 domain::错误::未注册 => "not_registered",
                 domain::错误::频道无地区 { .. } => "no_region",
-                // 还没有指令路径能产生这两种拒绝（S3 落地）。到时错误码、
-                // 玩家文案与 `docs/arch/protocol.md` 的表三处一起定稿；
+                // 规则拒绝 → bad_request（D49.3 首个落地：冷却中）。
+                domain::错误::冷却中 { .. } => "bad_request",
+                // 还没有指令路径能产生这两种拒绝。错误码、玩家文案与
+                // `docs/arch/protocol.md` 的表三处随产生路径一起定稿（D49.3）；
                 // 穷尽 match 是提醒，不是自动完成。
                 domain::错误::物资不足 { .. } | domain::错误::数量溢出 { .. } => {
                     "internal"
                 },
             },
             Self::不认识的指令 { .. } => "unknown_command",
+            Self::多余参数 { .. } => "bad_request",
             Self::编号用尽 { .. } => "internal",
         }
     }
@@ -205,12 +215,14 @@ impl 业务错误 {
             Self::领域(领域错误) => match 领域错误 {
                 domain::错误::未注册 => 文案::未注册(),
                 domain::错误::频道无地区 { .. } => 文案::频道无地区(),
-                // 同上：S3 产生这类拒绝时，换成带数值的真文案。
+                domain::错误::冷却中 { 剩余秒 } => 文案::冷却中(*剩余秒),
+                // 同上：产生路径落地时换成带数值的真文案（D49.3）。
                 domain::错误::物资不足 { .. } | domain::错误::数量溢出 { .. } => {
                     文案::系统开小差()
                 },
             },
             Self::不认识的指令 { .. } => 文案::不认识的指令(),
+            Self::多余参数 { 词头 } => 文案::多余参数(词头),
             Self::编号用尽 { .. } => 文案::系统开小差(),
         }
     }
@@ -219,7 +231,7 @@ impl 业务错误 {
     pub const fn 日志级别(&self) -> tracing::Level {
         match self {
             Self::领域(_) => tracing::Level::INFO,
-            Self::不认识的指令 { .. } => tracing::Level::DEBUG,
+            Self::不认识的指令 { .. } | Self::多余参数 { .. } => tracing::Level::DEBUG,
             Self::编号用尽 { .. } => tracing::Level::ERROR,
         }
     }

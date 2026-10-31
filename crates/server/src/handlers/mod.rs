@@ -5,5 +5,7 @@
 //! **当前时间也由分发层注入**——处理器不自己取时间，测试才能定住时间
 //! （"跨天签到"这类用例不再需要动系统时钟）。
 
+#[path = "economy.rs"]
+pub(crate) mod 经济;
 #[path = "account.rs"]
 pub(crate) mod 账号;
