@@ -166,6 +166,15 @@ pub(crate) struct 频道地区行 {
     pub 名称: String,
 }
 
+/// `库存` 表的一行；所有者两列在查询的 `WHERE` 里已定死，不必带出来。
+#[derive(Debug, sqlx::FromRow)]
+pub(crate) struct 库存行 {
+    /// 物品编码（catalog 稳定键，如 `resource:food`）。
+    pub 物品: String,
+    /// 数量（DOMAIN `非负计数`，读出来只会 ≥ 0）。
+    pub 数量: i64,
+}
+
 #[cfg(test)]
 mod 测试 {
     use super::玩家行;

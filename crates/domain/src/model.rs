@@ -53,6 +53,16 @@ macro_rules! 编码枚举 {
                 }
             }
 
+            /// 中文展示名（变体名的字符串形式，与 catalog 词条一致）。
+            ///
+            /// [`物品::编码`] 是落库的稳定键（面向数据库与日志）；
+            /// 这里是给人看的词——玩家可见文本由 `server` 的 `文案` 模块组装。
+            pub const fn 名称(self) -> &'static str {
+                match self {
+                    $(Self::$变体 => stringify!($变体),)+
+                }
+            }
+
             /// 全部变体，供对账与往返测试。
             pub const 全部: &'static [Self] = &[$(Self::$变体),+];
         }
@@ -363,6 +373,15 @@ impl 物品 {
             Self::弹药(_) => 门类::弹药,
         }
     }
+
+    /// 中文展示名（如 `生活资料`），给玩家看的词由 `文案` 组装。
+    pub const fn 名称(self) -> &'static str {
+        match self {
+            Self::资源(哪种) => 哪种.名称(),
+            Self::装备(哪种) => 哪种.名称(),
+            Self::弹药(哪种) => 哪种.名称(),
+        }
+    }
 }
 
 impl fmt::Display for 物品 {
@@ -604,6 +623,15 @@ mod 测试 {
         assert_eq!(物品::资源(资源::生活资料).编码(), "resource:food");
         assert_eq!(物品::装备(装备::重炮).编码(), "equipment:heavy_artillery");
         assert_eq!(物品::弹药(弹药::生物病毒).编码(), "ammo:virus");
+    }
+
+    #[test]
+    fn 名称_与变体名一致_编码与名是两回事() {
+        // 名称给人看（catalog 词条），编码给库与日志（稳定键）——两个方向都不许漂。
+        assert_eq!(资源::生活资料.名称(), "生活资料");
+        assert_eq!(物品::资源(资源::钢铁).名称(), "钢铁");
+        assert_eq!(物品::装备(装备::重炮).名称(), "重炮");
+        assert_eq!(联军职务::元首.名称(), "元首");
     }
 
     #[test]

@@ -16,7 +16,7 @@
 // 不该因此被当成"多余依赖"删掉——它们是库侧要的。
 #![allow(unused_crate_dependencies, reason = "测试只用到库的一小部分依赖")]
 
-use domain::实体::地区Id;
+use domain::实体::{地区Id, 物品, 资源};
 use domain::平台;
 use server::{业务错误, 处理, 来信, 状态, 错误};
 
@@ -36,6 +36,8 @@ const 账号_重复: &str = "测试账号-重复";
 const 账号_没注册: &str = "测试账号-没注册";
 const 账号_没地区: &str = "测试账号-没地区";
 const 账号_未知指令: &str = "测试账号-未知指令";
+const 账号_资料: &str = "测试账号-资料";
+const 账号_库存: &str = "测试账号-资料库存";
 
 /// 从文案里挖出 `P123456` 这种编号。
 fn 提取玩家编号(文案: &str) -> Option<String> {
@@ -207,6 +209,72 @@ async fn 已注册的人发不认识的指令会收到_unknown_command() -> Resu
         结果.err().map(|失败| 失败.错误码()),
         Some("unknown_command")
     );
+
+    Ok(())
+}
+
+/// `我的资料`：注册后查得到自己——编号、出生地区、空背包都在文案里（S3）。
+#[tokio::test]
+#[ignore = "需要 DATABASE_URL 指向一个测试库"]
+async fn 注册后能查我的资料() -> Result<(), Box<dyn std::error::Error>> {
+    let Some(状态) = 连库().await? else {
+        return Ok(());
+    };
+    播种(&状态, 账号_资料).await?;
+    处理(&状态, &来信(已绑定频道, 账号_资料, "注册")).await?;
+
+    let 编号 = 查编号(&状态, 账号_资料).await?.ok_or("应当已注册")?;
+    let 文案 = 处理(&状态, &来信(已绑定频道, 账号_资料, "我的资料")).await?;
+
+    assert!(文案.contains("====[我的资料]===="), "实际：{文案}");
+    assert!(文案.contains(&format!("P{编号}")), "实际：{文案}");
+    assert!(文案.contains("测试地区"), "实际：{文案}");
+    assert!(文案.contains("■ 联军：未加入"), "实际：{文案}");
+    assert!(文案.contains("■ 库存：（空）"), "实际：{文案}");
+
+    Ok(())
+}
+
+/// 未注册的人连"我的资料"都查不了：身份先行，回 `not_registered`。
+#[tokio::test]
+#[ignore = "需要 DATABASE_URL 指向一个测试库"]
+async fn 未注册的人查不了我的资料() -> Result<(), Box<dyn std::error::Error>> {
+    let Some(状态) = 连库().await? else {
+        return Ok(());
+    };
+    播种(&状态, 账号_没注册).await?;
+
+    let 结果 = 处理(&状态, &来信(已绑定频道, 账号_没注册, "我的资料")).await;
+
+    assert_eq!(结果.err().map(|失败| 失败.错误码()), Some("not_registered"));
+
+    Ok(())
+}
+
+/// 背包里的物资要按物品名 + 千分位展示（S3 的第一次格式化输出）。
+#[tokio::test]
+#[ignore = "需要 DATABASE_URL 指向一个测试库"]
+async fn 资料里的库存带物品名与千分位() -> Result<(), Box<dyn std::error::Error>> {
+    let Some(状态) = 连库().await? else {
+        return Ok(());
+    };
+    播种(&状态, 账号_库存).await?;
+    处理(&状态, &来信(已绑定频道, 账号_库存, "注册")).await?;
+
+    let 玩家_id = storage::测试辅助::查玩家_id(&状态.池, 平台::Onebot, 账号_库存)
+        .await?
+        .ok_or("应当已注册")?;
+    storage::测试辅助::发库存(
+        &状态.池,
+        storage::库存所有者::玩家(玩家_id),
+        物品::资源(资源::生活资料),
+        1_500_000,
+    )
+    .await?;
+
+    let 文案 = 处理(&状态, &来信(已绑定频道, 账号_库存, "我的资料")).await?;
+
+    assert!(文案.contains("■ 库存：生活资料 1,500,000"), "实际：{文案}");
 
     Ok(())
 }

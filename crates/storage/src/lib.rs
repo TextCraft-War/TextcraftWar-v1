@@ -18,10 +18,16 @@
 // 保留 `pub(crate)`：让"只在 crate 内可见"写在签名上。
 #![allow(clippy::redundant_pub_crate)]
 
+#[path = "region.rs"]
+mod 地区;
+#[path = "inventory.rs"]
+mod 库存;
 #[path = "player.rs"]
 mod 玩家;
 #[path = "system.rs"]
 mod 系统;
+#[path = "coalition.rs"]
+mod 联军;
 #[path = "rows.rs"]
 mod 行;
 #[path = "pool.rs"]
@@ -35,10 +41,13 @@ mod 频道;
 #[path = "testing.rs"]
 pub mod 测试辅助;
 
+pub use 地区::查地区名称;
+pub use 库存::{库存所有者, 查库存};
 pub use 玩家::{
     串行化注册, 插入玩家, 插入绑定, 显示玩家编号, 查玩家, 查绑定, 绑定
 };
 pub use 系统::{写状态, 查状态, 系统状态行, 锁定状态};
+pub use 联军::查联军名称;
 pub use 连接::{
     事务, 回滚, 建立连接池, 开事务, 执行者, 提交, 迁移, 连接池
 };
