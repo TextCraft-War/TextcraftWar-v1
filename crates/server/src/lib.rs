@@ -43,11 +43,11 @@ mod 会话;
 mod 分发;
 #[path = "handlers/mod.rs"]
 mod 处理器;
-#[path = "text.rs"]
+#[path = "text/mod.rs"]
 mod 文案;
 #[path = "clock.rs"]
 mod 时钟;
-#[path = "parser.rs"]
+#[path = "parser/mod.rs"]
 mod 解析;
 #[path = "scheduler.rs"]
 mod 调度;
