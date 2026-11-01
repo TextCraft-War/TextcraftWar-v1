@@ -36,6 +36,10 @@ pub 频道_id: String,
 
 理由见 [decisions.md D10](../../../docs/decisions.md)。
 
+> D51 的分界：**信封**字段（`id` / `platform` / `channelId` / …）是协议管道词汇，
+> 英文 camelCase；`command` 的**值**与 `args` 的**键**是游戏词汇，用中文
+> （与 design.md 指令表一致）。
+
 ### 2.3 不引用 domain
 
 本 crate **没有** `domain` 依赖，这是刻意的（见 architecture 第三节）。
@@ -49,7 +53,7 @@ pub 频道_id: String,
 
 ```rust
 /// 当前协议主版本号。
-pub const 协议版本: u32 = 1;
+pub const 协议主版本: u32 = 1;
 ```
 
 ## 三、测试
@@ -67,6 +71,6 @@ fn command_序列化形状固定() {
 
 ## 四、还没做的事
 
-- [ ] 消息类型定义
-- [ ] 往返测试
+- [x] 消息类型定义（含 D51 的 `command` + `args`）
+- [x] 往返测试
 - [ ] `segments` 的 `image` 变体（字段待定，见 docs/arch/protocol.md 第七节）

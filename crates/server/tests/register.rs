@@ -66,13 +66,14 @@ async fn 播种(状态: &状态, 账号: &str) -> Result<地区Id, storage::错�
     .await
 }
 
-/// 造一条来信。
-fn 来信(频道_id: &str, 账号: &str, 文本: &str) -> 来信 {
+/// 造一条来信（零参指令：`args` 缺省，D51）。
+fn 来信(频道_id: &str, 账号: &str, 指令名: &str) -> 来信 {
     来信 {
         平台: 平台::Onebot,
         频道_id: 频道_id.to_owned(),
         用户_uid: 账号.to_owned(),
-        文本: 文本.to_owned(),
+        指令名: 指令名.to_owned(),
+        参数: serde_json::Value::Null,
     }
 }
 

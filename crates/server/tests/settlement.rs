@@ -78,7 +78,8 @@ async fn 漏跑补算_生产封顶_招募清零_联军日结且幂等() -> Resul
         平台: 平台::Onebot,
         频道_id: 已绑定频道.to_owned(),
         用户_uid: 账号.to_owned(),
-        文本: "注册".to_owned(),
+        指令名: "注册".to_owned(),
+        参数: serde_json::Value::Null,
     };
     处理(&状态, &注册信).await?;
 

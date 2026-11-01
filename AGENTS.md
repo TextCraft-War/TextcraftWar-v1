@@ -45,11 +45,13 @@ domain -> 无
 - `crates/protocol` — 发给 Koishi 插件的 wire DTO 与 serde 序列化。**不引用 domain 类型**,
   防止内部模型与对外契约互相绑架。
 - `crates/storage` — sqlx 查询 + "数据库行 ↔ domain 类型"的翻译。只做翻译,不做规则。
-- `crates/server` — axum WebSocket 服务器、文本命令解析、事务编排、文案渲染。
+- `crates/server` — axum WebSocket 服务器、指令映射、事务编排、文案渲染。
 
 ## 四、通信架构(Koishi 插件对接)
 
-- `server` 暴露**通用 WebSocket 端点**,收发文本命令 + JSON 消息(消息类型由 `protocol` crate 定义)。
+- `server` 暴露**通用 WebSocket 端点**,收发结构化指令 JSON——指令在 Koishi 侧
+  注册并翻译成 `command` + `args` 过线,**语法归 Koishi、语义归 Rust**;
+  消息类型由 `protocol` crate 定义(D51)。
 - Koishi 侧另写对接插件:注册聊天命令、转发到 rust 文游、回传渲染结果。
 - 复用 Koishi 适配器生态(QQ/Discord/Telegram 等),**不自己实现 Satori 协议**。
 - JSON 字段名遵循英文白名单(见第六章),Rust 侧中文标识符用 `#[serde(rename = "...")]` 与 JSON key 解耦。

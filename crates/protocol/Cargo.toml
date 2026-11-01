@@ -9,6 +9,9 @@ repository.workspace = true
 
 [dependencies]
 serde.workspace = true
+# `args` 参数对象原样过线（D51）：本 crate 不解释参数形状，逐指令的
+# 反序列化在 `server`——protocol 不镜像 domain 词表。
+serde_json.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

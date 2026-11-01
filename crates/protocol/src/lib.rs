@@ -4,6 +4,7 @@
 //! 内部模型与对外契约各自演化，避免改一个内部字段名就迫使插件侧升级。
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// 当前协议主版本号。
 ///
@@ -27,7 +28,7 @@ pub enum 上行消息 {
         #[serde(rename = "protocolVersion")]
         协议版本: u32,
     },
-    /// 玩家发来的一条指令。
+    /// 玩家发来的一条指令（D51：指令在 Koishi 侧注册并翻译，过线即结构化）。
     #[serde(rename = "command")]
     指令 {
         /// 由 Koishi 生成，全局唯一，用于关联回复。
@@ -48,9 +49,14 @@ pub enum 上行消息 {
         /// 消息里被 @ 到的账号，按出现顺序。Rust 侧不解析平台私有的 @ 语法。
         #[serde(rename = "mentions", default, skip_serializing_if = "Vec::is_empty")]
         提及: Vec<提及>,
-        /// 玩家原话。命令解析在 Rust 侧完成。
-        #[serde(rename = "text")]
-        文本: String,
+        /// 指令名：与 Koishi 侧注册的游戏指令同名。游戏词汇，用中文（D51）。
+        #[serde(rename = "command")]
+        指令名: String,
+        /// 指令参数对象：键为参数名（游戏词汇）。零参指令省略——
+        /// 反序列化成 [`Value::Null`]；未知键容忍（加字段不破坏）。
+        /// 参数形状的逐指令解释在 `server`，本 crate 原样搬运。
+        #[serde(rename = "args", default, skip_serializing_if = "Value::is_null")]
+        参数: Value,
     },
     /// 心跳。Koishi 每 30 秒发一次。
     #[serde(rename = "ping")]
@@ -159,12 +165,15 @@ mod 测试 {
             用户_uid: "3071303571".to_owned(),
             昵称: None,
             提及: Vec::new(),
-            文本: "签到".to_owned(),
+            指令名: "签到".to_owned(),
+            参数: Value::Null,
         };
 
         let json = serde_json::to_string(&消息).unwrap();
 
         assert!(json.contains(r#""type":"command""#), "实际输出：{json}");
+        // 指令名是游戏词汇，**值**用中文（D51）；键仍然是英文。
+        assert!(json.contains(r#""command":"签到""#), "实际输出：{json}");
         assert!(
             json.contains(r#""channelId":"523909412""#),
             "实际输出：{json}"
@@ -175,6 +184,8 @@ mod 测试 {
         );
         // 空提及不该出现在 wire 上
         assert!(!json.contains(r#""mentions""#), "实际输出：{json}");
+        // 零参指令省略 args（D51）
+        assert!(!json.contains(r#""args""#), "实际输出：{json}");
         // 中文标识符绝不能漏进 wire 格式
         assert!(!json.contains("频道_id"), "实际输出：{json}");
         assert!(!json.contains("昵称"), "实际输出：{json}");
@@ -189,19 +200,23 @@ mod 测试 {
             "channelId":"900",
             "userId":"1",
             "mentions":[{"platform":"discord","userId":"42"}],
-            "text":"炮击 @某人"
+            "command":"招募工人",
+            "args":{"数量":5}
         }"#;
 
         let 消息: 上行消息 = serde_json::from_str(样例).unwrap();
 
         let 上行消息::指令 {
-            提及: 被提及, 文本,
-        ..
+            提及: 被提及,
+            指令名,
+            参数,
+            ..
         } = 消息
         else {
             panic!("应当是 command");
         };
-        assert_eq!(文本, "炮击 @某人");
+        assert_eq!(指令名, "招募工人");
+        assert_eq!(参数, serde_json::json!({ "数量": 5 }));
         assert_eq!(
             被提及,
             vec![提及 {
@@ -209,6 +224,29 @@ mod 测试 {
                 用户_uid: "42".to_owned(),
             }]
         );
+    }
+
+    #[test]
+    fn 零参指令的_args_可以省略() {
+        let 样例 = r#"{
+            "type":"command",
+            "id":"c-3",
+            "platform":"onebot",
+            "channelId":"900",
+            "userId":"1",
+            "command":"签到"
+        }"#;
+
+        let 消息: 上行消息 = serde_json::from_str(样例).unwrap();
+
+        let 上行消息::指令 {
+            指令名, 参数, ..
+        } = 消息
+        else {
+            panic!("应当是 command");
+        };
+        assert_eq!(指令名, "签到");
+        assert_eq!(参数, Value::Null, "缺省的 args 反序列化成 Null");
     }
 
     #[test]
